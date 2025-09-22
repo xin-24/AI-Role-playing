@@ -5,13 +5,13 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class QiniuAIConfig {
-    @Value("${qiniu.ai.api-key}")
+    @Value("${llm.qiniu.api-key}")
     private String apiKey;
 
-    @Value("${qiniu.ai.base-url}")
+    @Value("${llm.qiniu.base-url}")
     private String baseUrl;
 
-    @Value("${qiniu.ai.model}")
+    @Value("${llm.qiniu.model}")
     private String model;
 
     // Getters and Setters

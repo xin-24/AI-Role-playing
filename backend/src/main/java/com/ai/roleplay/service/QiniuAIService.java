@@ -1,9 +1,5 @@
 package com.ai.roleplay.service;
 
-import com.ai.roleplay.config.QiniuAIConfig;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -11,15 +7,16 @@ import java.util.Map;
 import org.apache.hc.client5.http.classic.methods.HttpPost;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.hc.core5.http.ContentType;
-import org.apache.hc.core5.http.ParseException;
 import org.apache.hc.core5.http.io.entity.EntityUtils;
-import org.apache.hc.core5.http.ClassicHttpResponse;
+import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.json.JSONObject;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.ai.roleplay.config.QiniuAIConfig;
 
 @Service
 public class QiniuAIService {
@@ -82,7 +79,8 @@ public class QiniuAIService {
      */
     private String callQiniuAI(String systemPrompt, String userMessage) {
         try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
-            String url = qiniuAIConfig.getBaseUrl() + "/v1/chat/completions";
+            // 修复URL构建问题，baseUrl已经包含/v1路径
+            String url = qiniuAIConfig.getBaseUrl() + "/chat/completions";
             logger.info("调用七牛AI API，URL: {}", url);
             logger.info("API密钥前缀: {}",
                     qiniuAIConfig.getApiKey().substring(0, Math.min(10, qiniuAIConfig.getApiKey().length())) + "...");
