@@ -14,6 +14,7 @@ function App() {
     const [selectedCharacter, setSelectedCharacter] = useState(null);
     const [chatMessages, setChatMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
+    const [isSending, setIsSending] = useState(false);
 
     // 获取所有角色
     useEffect(() => {
@@ -92,7 +93,9 @@ function App() {
 
     // 发送消息
     const sendMessage = async () => {
-        if (!newMessage.trim() || !selectedCharacter) return;
+        if (!newMessage.trim() || !selectedCharacter || isSending) return;
+
+        setIsSending(true);
 
         // 添加用户消息到界面
         const userMessage = {
@@ -101,8 +104,11 @@ function App() {
             isUserMessage: true
         };
 
-        setChatMessages([...chatMessages, userMessage]);
-        
+        // 立即更新界面显示用户消息
+        const updatedMessages = [...chatMessages, userMessage];
+        setChatMessages(updatedMessages);
+        setNewMessage('');
+
         try {
             const response = await fetch('http://localhost:8082/api/chat/send', {
                 method: 'POST',
@@ -113,12 +119,32 @@ function App() {
             });
 
             if (response.ok) {
-                // 这里可以添加AI回复的逻辑
-                // 暂时我们只保存用户的消息
-                setNewMessage('');
+                // 重新获取聊天历史以包含AI回复
+                const historyResponse = await fetch(`http://localhost:8082/api/chat/history/${selectedCharacter.id}`);
+                if (historyResponse.ok) {
+                    const updatedChatHistory = await historyResponse.json();
+                    setChatMessages(updatedChatHistory);
+                }
+            } else {
+                // 如果发送失败，显示错误消息
+                const errorMessage = {
+                    characterId: selectedCharacter.id,
+                    message: "抱歉，消息发送失败，请重试。",
+                    isUserMessage: false
+                };
+                setChatMessages([...updatedMessages, errorMessage]);
             }
         } catch (error) {
             console.error('发送消息失败:', error);
+            // 显示错误消息
+            const errorMessage = {
+                characterId: selectedCharacter.id,
+                message: "抱歉，消息发送失败，请检查网络连接。",
+                isUserMessage: false
+            };
+            setChatMessages([...updatedMessages, errorMessage]);
+        } finally {
+            setIsSending(false);
         }
     };
 
@@ -173,8 +199,8 @@ function App() {
                         <h2>可用角色</h2>
                         <div className="characters-grid">
                             {characters.map((character) => (
-                                <div 
-                                    key={character.id} 
+                                <div
+                                    key={character.id}
                                     className={`character-card ${selectedCharacter && selectedCharacter.id === character.id ? 'selected' : ''}`}
                                     onClick={() => selectCharacterForChat(character)}
                                 >
@@ -200,7 +226,7 @@ function App() {
                                                 {msg.message}
                                             </div>
                                             <div className="message-time">
-                                                {msg.createdAt && new Date(msg.createdAt).toLocaleString()}
+                                                {msg.createdAt ? new Date(msg.createdAt).toLocaleString() : '刚刚'}
                                             </div>
                                         </div>
                                     ))}
@@ -211,8 +237,11 @@ function App() {
                                         onChange={(e) => setNewMessage(e.target.value)}
                                         onKeyPress={handleKeyPress}
                                         placeholder={`对 ${selectedCharacter.name} 说些什么...`}
+                                        disabled={isSending}
                                     />
-                                    <button onClick={sendMessage}>发送</button>
+                                    <button onClick={sendMessage} disabled={isSending}>
+                                        {isSending ? '发送中...' : '发送'}
+                                    </button>
                                 </div>
                             </div>
                         </section>

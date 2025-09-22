@@ -22,3 +22,10 @@ spring:
 logging:
   level:
     com.ai.roleplay: DEBUG
+
+# Qiniu AI Configuration
+qiniu:
+  ai:
+    api-key: sk-596673f5966536396e022121155db27c3a38969631c9cad0c66205edaa05fb3e
+    base-url: https://api.qiniu.com
+    model: qwen2
