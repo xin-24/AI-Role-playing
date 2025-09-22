@@ -11,6 +11,9 @@ function App() {
         backgroundStory: '',
         voiceSettings: ''
     });
+    const [selectedCharacter, setSelectedCharacter] = useState(null);
+    const [chatMessages, setChatMessages] = useState([]);
+    const [newMessage, setNewMessage] = useState('');
 
     // 获取所有角色
     useEffect(() => {
@@ -71,6 +74,54 @@ function App() {
         }
     };
 
+    // 选择角色进行对话
+    const selectCharacterForChat = async (character) => {
+        setSelectedCharacter(character);
+        // 获取聊天历史
+        try {
+            const response = await fetch(`http://localhost:8082/api/chat/history/${character.id}`);
+            if (response.ok) {
+                const messages = await response.json();
+                setChatMessages(messages);
+            }
+        } catch (error) {
+            console.error('获取聊天历史失败:', error);
+            setChatMessages([]);
+        }
+    };
+
+    // 发送消息
+    const sendMessage = async () => {
+        if (!newMessage.trim() || !selectedCharacter) return;
+
+        // 添加用户消息到界面
+        const userMessage = {
+            characterId: selectedCharacter.id,
+            message: newMessage,
+            isUserMessage: true
+        };
+
+        setChatMessages([...chatMessages, userMessage]);
+        
+        try {
+            const response = await fetch('http://localhost:8082/api/chat/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(userMessage),
+            });
+
+            if (response.ok) {
+                // 这里可以添加AI回复的逻辑
+                // 暂时我们只保存用户的消息
+                setNewMessage('');
+            }
+        } catch (error) {
+            console.error('发送消息失败:', error);
+        }
+    };
+
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setNewCharacter({
@@ -86,6 +137,13 @@ function App() {
     const handleSearchSubmit = (e) => {
         e.preventDefault();
         searchCharacters();
+    };
+
+    const handleKeyPress = (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
     };
 
     return (
@@ -109,21 +167,57 @@ function App() {
                     </form>
                 </section>
 
-                {/* 角色列表 */}
-                <section className="characters-section">
-                    <h2>可用角色</h2>
-                    <div className="characters-grid">
-                        {characters.map((character) => (
-                            <div key={character.id} className="character-card">
-                                <h3>{character.name}</h3>
-                                <p><strong>描述:</strong> {character.description}</p>
-                                <p><strong>性格特征:</strong> {character.personalityTraits}</p>
-                                <p><strong>背景故事:</strong> {character.backgroundStory}</p>
-                                <p><strong>语音设置:</strong> {character.voiceSettings}</p>
+                <div className="main-content">
+                    {/* 角色列表 */}
+                    <section className="characters-section">
+                        <h2>可用角色</h2>
+                        <div className="characters-grid">
+                            {characters.map((character) => (
+                                <div 
+                                    key={character.id} 
+                                    className={`character-card ${selectedCharacter && selectedCharacter.id === character.id ? 'selected' : ''}`}
+                                    onClick={() => selectCharacterForChat(character)}
+                                >
+                                    <h3>{character.name}</h3>
+                                    <p><strong>描述:</strong> {character.description}</p>
+                                    <p><strong>性格特征:</strong> {character.personalityTraits}</p>
+                                    <p><strong>背景故事:</strong> {character.backgroundStory}</p>
+                                    <p><strong>语音设置:</strong> {character.voiceSettings}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+
+                    {/* 对话区域 */}
+                    {selectedCharacter && (
+                        <section className="chat-section">
+                            <h2>与 {selectedCharacter.name} 对话</h2>
+                            <div className="chat-container">
+                                <div className="chat-messages">
+                                    {chatMessages.map((msg, index) => (
+                                        <div key={index} className={`message ${msg.isUserMessage ? 'user-message' : 'ai-message'}`}>
+                                            <div className="message-content">
+                                                {msg.message}
+                                            </div>
+                                            <div className="message-time">
+                                                {msg.createdAt && new Date(msg.createdAt).toLocaleString()}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="chat-input">
+                                    <textarea
+                                        value={newMessage}
+                                        onChange={(e) => setNewMessage(e.target.value)}
+                                        onKeyPress={handleKeyPress}
+                                        placeholder={`对 ${selectedCharacter.name} 说些什么...`}
+                                    />
+                                    <button onClick={sendMessage}>发送</button>
+                                </div>
                             </div>
-                        ))}
-                    </div>
-                </section>
+                        </section>
+                    )}
+                </div>
 
                 {/* 添加新角色表单 */}
                 <section className="add-character-section">

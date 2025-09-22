@@ -1,3 +1,8 @@
 com/ai/roleplay/repository/CharacterRepository.class
-com/ai/roleplay/Application.class
+com/ai/roleplay/controller/CharacterController.class
 com/ai/roleplay/model/Character.class
+com/ai/roleplay/controller/ChatMessageController.class
+com/ai/roleplay/model/ChatMessage.class
+com/ai/roleplay/Application.class
+com/ai/roleplay/repository/ChatMessageRepository.class
+com/ai/roleplay/config/WebConfig.class
