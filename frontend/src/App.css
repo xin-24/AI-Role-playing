@@ -155,6 +155,10 @@ main {
     padding: 10px 15px;
     border-radius: 18px;
     word-wrap: break-word;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .user-message .message-content {
@@ -167,6 +171,23 @@ main {
     background-color: #e9ecef;
     color: #333;
     border-bottom-left-radius: 4px;
+}
+
+.voice-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    padding: 5px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.voice-button:hover {
+    background-color: rgba(0, 0, 0, 0.1);
 }
 
 .message-time {
@@ -220,7 +241,8 @@ main {
 }
 
 .add-character-section input,
-.add-character-section textarea {
+.add-character-section textarea,
+.add-character-section select {
     width: 100%;
     padding: 10px;
     border: 1px solid #ddd;
@@ -262,5 +284,9 @@ main {
 
     .main-content {
         flex-direction: column;
+    }
+
+    .message-content {
+        max-width: 90%;
     }
 }

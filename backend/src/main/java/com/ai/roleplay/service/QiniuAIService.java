@@ -47,7 +47,7 @@ public class QiniuAIService {
         systemPrompt.append("角色描述：").append(characterDescription).append("\n");
         systemPrompt.append("性格特征：").append(personalityTraits).append("\n");
         systemPrompt.append("背景故事：").append(backgroundStory).append("\n");
-        systemPrompt.append("请始终保持这个角色的身份，用符合角色性格和背景的方式进行回复。");
+        systemPrompt.append("请始终保持这个角色的身份，用符合角色性格和背景的方式进行回复，可以使用对应的颜文字或者使用emoji表情");
 
         // 构建对话历史消息
         StringBuilder conversationHistory = new StringBuilder();

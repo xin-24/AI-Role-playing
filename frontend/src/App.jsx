@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 
 function App() {
@@ -15,11 +15,21 @@ function App() {
     const [chatMessages, setChatMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
+    const [availableVoices, setAvailableVoices] = useState([]);
+    const chatContainerRef = useRef(null);
 
     // 获取所有角色
     useEffect(() => {
         fetchCharacters();
+        fetchAvailableVoices();
     }, []);
+
+    // 滚动到最新消息
+    useEffect(() => {
+        if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+    }, [chatMessages]);
 
     const fetchCharacters = async () => {
         try {
@@ -28,6 +38,16 @@ function App() {
             setCharacters(data);
         } catch (error) {
             console.error('获取角色失败:', error);
+        }
+    };
+
+    const fetchAvailableVoices = async () => {
+        try {
+            const response = await fetch('http://localhost:8082/api/characters/voices');
+            const voices = await response.json();
+            setAvailableVoices(voices);
+        } catch (error) {
+            console.error('获取可用语音失败:', error);
         }
     };
 
@@ -148,6 +168,65 @@ function App() {
         }
     };
 
+    // 播放语音
+    const playVoice = async (message) => {
+        if (!selectedCharacter) {
+            alert('请先选择一个角色');
+            return;
+        }
+
+        try {
+            // 检测消息语言
+            const language = detectLanguage(message);
+
+            // 创建一个隐藏的音频元素来播放语音
+            const audio = new Audio();
+
+            // 构建URL并处理特殊字符
+            const baseUrl = 'http://localhost:8082/api/voice/speak';
+            const params = new URLSearchParams();
+            params.append('text', message);
+            params.append('language', language);
+
+            // 如果有语音设置，则添加
+            if (selectedCharacter.voiceSettings) {
+                params.append('voice', selectedCharacter.voiceSettings);
+            }
+
+            audio.src = `${baseUrl}?${params.toString()}`;
+
+            // 添加事件监听器以处理播放状态
+            audio.onended = () => {
+                console.log('语音播放完成');
+            };
+
+            audio.onerror = (e) => {
+                console.error('语音播放失败:', e);
+                alert('语音播放失败，请重试');
+            };
+
+            // 开始播放
+            await audio.play();
+        } catch (error) {
+            console.error('播放语音失败:', error);
+            alert('语音播放失败: ' + error.message);
+        }
+    };
+
+    /**
+     * 检测文本语言
+     * 
+     * @param {string} text 要检测的文本
+     * @return {string} 语言代码 ('zh' 或 'en')
+     */
+    const detectLanguage = (text) => {
+        if (!text) return 'en';
+
+        // 检查是否包含中文字符
+        const chineseRegex = /[\u4E00-\u9FFF]/;
+        return chineseRegex.test(text) ? 'zh' : 'en';
+    };
+
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setNewCharacter({
@@ -219,11 +298,20 @@ function App() {
                         <section className="chat-section">
                             <h2>与 {selectedCharacter.name} 对话</h2>
                             <div className="chat-container">
-                                <div className="chat-messages">
+                                <div className="chat-messages" ref={chatContainerRef}>
                                     {chatMessages.map((msg, index) => (
                                         <div key={index} className={`message ${msg.isUserMessage ? 'user-message' : 'ai-message'}`}>
                                             <div className="message-content">
                                                 {msg.message}
+                                                {!msg.isUserMessage && (
+                                                    <button
+                                                        className="voice-button"
+                                                        onClick={() => playVoice(msg.message)}
+                                                        title="播放语音"
+                                                    >
+                                                        🔊
+                                                    </button>
+                                                )}
                                             </div>
                                             <div className="message-time">
                                                 {msg.createdAt ? new Date(msg.createdAt).toLocaleString() : '刚刚'}
@@ -293,14 +381,17 @@ function App() {
                             />
                         </div>
                         <div>
-                            <input
-                                type="text"
+                            <select
                                 name="voiceSettings"
-                                placeholder="语音设置"
                                 value={newCharacter.voiceSettings}
                                 onChange={handleInputChange}
                                 required
-                            />
+                            >
+                                <option value="">选择语音</option>
+                                {availableVoices.map((voice, index) => (
+                                    <option key={index} value={voice}>{voice}</option>
+                                ))}
+                            </select>
                         </div>
                         <button type="submit">添加角色</button>
                     </form>
