@@ -22,8 +22,11 @@ public class Character {
     @Column(name = "background_story", length = 5000)
     private String backgroundStory;
 
-    @Column(name = "voice_settings")
-    private String voiceSettings;
+    // 注释掉voiceSettings字段而不是删除，以保持数据库兼容性
+    /*
+     * @Column(name = "voice_settings")
+     * private String voiceSettings;
+     */
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -36,12 +39,12 @@ public class Character {
     }
 
     public Character(String name, String description, String personalityTraits,
-            String backgroundStory, String voiceSettings) {
+            String backgroundStory/* , String voiceSettings */) {
         this.name = name;
         this.description = description;
         this.personalityTraits = personalityTraits;
         this.backgroundStory = backgroundStory;
-        this.voiceSettings = voiceSettings;
+        // this.voiceSettings = voiceSettings;
     }
 
     // Getters and Setters
@@ -85,13 +88,16 @@ public class Character {
         this.backgroundStory = backgroundStory;
     }
 
-    public String getVoiceSettings() {
-        return voiceSettings;
-    }
-
-    public void setVoiceSettings(String voiceSettings) {
-        this.voiceSettings = voiceSettings;
-    }
+    // 注释掉voiceSettings的getter和setter方法
+    /*
+     * public String getVoiceSettings() {
+     * return voiceSettings;
+     * }
+     * 
+     * public void setVoiceSettings(String voiceSettings) {
+     * this.voiceSettings = voiceSettings;
+     * }
+     */
 
     public LocalDateTime getCreatedAt() {
         return createdAt;

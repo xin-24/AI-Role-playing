@@ -8,20 +8,22 @@ function App() {
         name: '',
         description: '',
         personalityTraits: '',
-        backgroundStory: '',
-        voiceSettings: ''
+        backgroundStory: ''
     });
     const [selectedCharacter, setSelectedCharacter] = useState(null);
     const [chatMessages, setChatMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
-    const [availableVoices, setAvailableVoices] = useState([]);
     const chatContainerRef = useRef(null);
+    // Web Speech API相关状态
+    const [isSpeaking, setIsSpeaking] = useState(false);
+    const [availableVoices, setAvailableVoices] = useState([]);
 
     // 获取所有角色
     useEffect(() => {
         fetchCharacters();
-        fetchAvailableVoices();
+        // 初始化Web Speech API
+        initSpeechSynthesis();
     }, []);
 
     // 滚动到最新消息
@@ -31,6 +33,26 @@ function App() {
         }
     }, [chatMessages]);
 
+    // 初始化Web Speech API
+    const initSpeechSynthesis = () => {
+        if ('speechSynthesis' in window) {
+            // 获取可用的语音列表
+            const loadVoices = () => {
+                const voices = window.speechSynthesis.getVoices();
+                setAvailableVoices(voices);
+            };
+
+            // 某些浏览器需要延迟加载语音列表
+            if (window.speechSynthesis.onvoiceschanged !== undefined) {
+                window.speechSynthesis.onvoiceschanged = loadVoices;
+            }
+            
+            loadVoices();
+        } else {
+            console.warn('Web Speech API 不支持当前浏览器');
+        }
+    };
+
     const fetchCharacters = async () => {
         try {
             const response = await fetch('http://localhost:8082/api/characters');
@@ -38,16 +60,6 @@ function App() {
             setCharacters(data);
         } catch (error) {
             console.error('获取角色失败:', error);
-        }
-    };
-
-    const fetchAvailableVoices = async () => {
-        try {
-            const response = await fetch('http://localhost:8082/api/characters/voices');
-            const voices = await response.json();
-            setAvailableVoices(voices);
-        } catch (error) {
-            console.error('获取可用语音失败:', error);
         }
     };
 
@@ -86,8 +98,7 @@ function App() {
                     name: '',
                     description: '',
                     personalityTraits: '',
-                    backgroundStory: '',
-                    voiceSettings: ''
+                    backgroundStory: ''
                 });
             }
         } catch (error) {
@@ -168,63 +179,78 @@ function App() {
         }
     };
 
-    // 播放语音
+    // 使用Web Speech API播放语音
     const playVoice = async (message) => {
-        if (!selectedCharacter) {
-            alert('请先选择一个角色');
-            return;
-        }
+        if (!message.trim()) return;
 
-        try {
-            // 检测消息语言
-            const language = detectLanguage(message);
-
-            // 创建一个隐藏的音频元素来播放语音
-            const audio = new Audio();
-
-            // 构建URL并处理特殊字符
-            const baseUrl = 'http://localhost:8082/api/voice/speak';
-            const params = new URLSearchParams();
-            params.append('text', message);
-            params.append('language', language);
-
-            // 如果有语音设置，则添加
-            if (selectedCharacter.voiceSettings) {
-                params.append('voice', selectedCharacter.voiceSettings);
+        if ('speechSynthesis' in window) {
+            // 停止当前正在播放的语音
+            if (isSpeaking) {
+                window.speechSynthesis.cancel();
+                setIsSpeaking(false);
             }
 
-            audio.src = `${baseUrl}?${params.toString()}`;
-
-            // 添加事件监听器以处理播放状态
-            audio.onended = () => {
+            // 创建语音对象
+            const utterance = new SpeechSynthesisUtterance(message);
+            
+            // 设置语音参数
+            utterance.rate = 1; // 语速 (0.1 - 10)
+            utterance.pitch = 1; // 音调 (0 - 2)
+            utterance.volume = 1; // 音量 (0 - 1)
+            
+            // 选择合适的语音（优先选择中文语音）
+            let selectedVoice = null;
+            if (availableVoices.length > 0) {
+                // 优先选择中文语音
+                selectedVoice = availableVoices.find(voice => 
+                    voice.lang.includes('zh') || voice.lang.includes('CN') || voice.lang.includes('TW')
+                );
+                
+                // 如果没有中文语音，则选择英文语音
+                if (!selectedVoice) {
+                    selectedVoice = availableVoices.find(voice => 
+                        voice.lang.includes('en')
+                    );
+                }
+                
+                // 如果还是没有找到，则使用第一个语音
+                if (!selectedVoice) {
+                    selectedVoice = availableVoices[0];
+                }
+                
+                utterance.voice = selectedVoice;
+            }
+            
+            // 设置事件监听器
+            utterance.onstart = () => {
+                setIsSpeaking(true);
+                console.log('开始播放语音');
+            };
+            
+            utterance.onend = () => {
+                setIsSpeaking(false);
                 console.log('语音播放完成');
             };
-
-            audio.onerror = (e) => {
-                console.error('语音播放失败:', e);
+            
+            utterance.onerror = (event) => {
+                setIsSpeaking(false);
+                console.error('语音播放失败:', event);
                 alert('语音播放失败，请重试');
             };
-
+            
             // 开始播放
-            await audio.play();
-        } catch (error) {
-            console.error('播放语音失败:', error);
-            alert('语音播放失败: ' + error.message);
+            window.speechSynthesis.speak(utterance);
+        } else {
+            alert('当前浏览器不支持Web Speech API');
         }
     };
 
-    /**
-     * 检测文本语言
-     * 
-     * @param {string} text 要检测的文本
-     * @return {string} 语言代码 ('zh' 或 'en')
-     */
-    const detectLanguage = (text) => {
-        if (!text) return 'en';
-
-        // 检查是否包含中文字符
-        const chineseRegex = /[\u4E00-\u9FFF]/;
-        return chineseRegex.test(text) ? 'zh' : 'en';
+    // 停止语音播放
+    const stopVoice = () => {
+        if ('speechSynthesis' in window && isSpeaking) {
+            window.speechSynthesis.cancel();
+            setIsSpeaking(false);
+        }
     };
 
     const handleInputChange = (e) => {
@@ -287,7 +313,6 @@ function App() {
                                     <p><strong>描述:</strong> {character.description}</p>
                                     <p><strong>性格特征:</strong> {character.personalityTraits}</p>
                                     <p><strong>背景故事:</strong> {character.backgroundStory}</p>
-                                    <p><strong>语音设置:</strong> {character.voiceSettings}</p>
                                 </div>
                             ))}
                         </div>
@@ -307,9 +332,10 @@ function App() {
                                                     <button
                                                         className="voice-button"
                                                         onClick={() => playVoice(msg.message)}
-                                                        title="播放语音"
+                                                        title={isSpeaking ? "停止播放" : "播放语音"}
+                                                        disabled={!msg.message.trim()}
                                                     >
-                                                        🔊
+                                                        {isSpeaking ? "⏹️" : "🔊"}
                                                     </button>
                                                 )}
                                             </div>
@@ -330,6 +356,12 @@ function App() {
                                     <button onClick={sendMessage} disabled={isSending}>
                                         {isSending ? '发送中...' : '发送'}
                                     </button>
+                                    {/* 添加停止语音按钮 */}
+                                    {isSpeaking && (
+                                        <button onClick={stopVoice} className="stop-voice-button">
+                                            停止语音
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </section>
@@ -379,19 +411,6 @@ function App() {
                                 onChange={handleInputChange}
                                 required
                             />
-                        </div>
-                        <div>
-                            <select
-                                name="voiceSettings"
-                                value={newCharacter.voiceSettings}
-                                onChange={handleInputChange}
-                                required
-                            >
-                                <option value="">选择语音</option>
-                                {availableVoices.map((voice, index) => (
-                                    <option key={index} value={voice}>{voice}</option>
-                                ))}
-                            </select>
                         </div>
                         <button type="submit">添加角色</button>
                     </form>
