@@ -18,6 +18,9 @@ function App() {
     // Web Speech API相关状态
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [availableVoices, setAvailableVoices] = useState([]);
+    // 语音输入相关
+    const [isRecording, setIsRecording] = useState(false);
+    const recognitionRef = useRef(null);
 
     // 获取所有角色
     useEffect(() => {
@@ -25,6 +28,79 @@ function App() {
         // 初始化Web Speech API
         initSpeechSynthesis();
     }, []);
+
+    // 初始化语音识别（Web Speech API）
+    useEffect(() => {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            return; // 浏览器不支持
+        }
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'zh-CN';
+        recognition.continuous = true;
+        recognition.interimResults = true;
+
+        recognition.onresult = (event) => {
+            let interimTranscript = '';
+            let finalTranscript = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const transcript = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                    finalTranscript += transcript;
+                } else {
+                    interimTranscript += transcript;
+                }
+            }
+            // 将识别文本填充到输入框（保留已有内容）
+            if (finalTranscript) {
+                setNewMessage(prev => (prev ? prev + ' ' : '') + finalTranscript.trim());
+            }
+        };
+
+        recognition.onerror = (e) => {
+            console.error('Speech recognition error:', e);
+            setIsRecording(false);
+        };
+
+        recognition.onend = () => {
+            setIsRecording(false);
+        };
+
+        recognitionRef.current = recognition;
+
+        return () => {
+            try {
+                recognition.stop();
+            } catch (_) { }
+        };
+    }, []);
+
+    const startRecording = () => {
+        if (isRecording) return;
+        const recognition = recognitionRef.current;
+        if (!recognition) {
+            alert('当前浏览器不支持语音输入');
+            return;
+        }
+        try {
+            recognition.start();
+            setIsRecording(true);
+        } catch (e) {
+            console.error('start recognition failed', e);
+        }
+    };
+
+    const stopRecording = () => {
+        const recognition = recognitionRef.current;
+        if (!recognition) return;
+        try {
+            recognition.stop();
+        } catch (e) {
+            console.error('stop recognition failed', e);
+        } finally {
+            setIsRecording(false);
+        }
+    };
 
     // 滚动到最新消息
     useEffect(() => {
@@ -46,7 +122,7 @@ function App() {
             if (window.speechSynthesis.onvoiceschanged !== undefined) {
                 window.speechSynthesis.onvoiceschanged = loadVoices;
             }
-            
+
             loadVoices();
         } else {
             console.warn('Web Speech API 不支持当前浏览器');
@@ -192,52 +268,52 @@ function App() {
 
             // 创建语音对象
             const utterance = new SpeechSynthesisUtterance(message);
-            
+
             // 设置语音参数
             utterance.rate = 1; // 语速 (0.1 - 10)
             utterance.pitch = 1; // 音调 (0 - 2)
             utterance.volume = 1; // 音量 (0 - 1)
-            
+
             // 选择合适的语音（优先选择中文语音）
             let selectedVoice = null;
             if (availableVoices.length > 0) {
                 // 优先选择中文语音
-                selectedVoice = availableVoices.find(voice => 
+                selectedVoice = availableVoices.find(voice =>
                     voice.lang.includes('zh') || voice.lang.includes('CN') || voice.lang.includes('TW')
                 );
-                
+
                 // 如果没有中文语音，则选择英文语音
                 if (!selectedVoice) {
-                    selectedVoice = availableVoices.find(voice => 
+                    selectedVoice = availableVoices.find(voice =>
                         voice.lang.includes('en')
                     );
                 }
-                
+
                 // 如果还是没有找到，则使用第一个语音
                 if (!selectedVoice) {
                     selectedVoice = availableVoices[0];
                 }
-                
+
                 utterance.voice = selectedVoice;
             }
-            
+
             // 设置事件监听器
             utterance.onstart = () => {
                 setIsSpeaking(true);
                 console.log('开始播放语音');
             };
-            
+
             utterance.onend = () => {
                 setIsSpeaking(false);
                 console.log('语音播放完成');
             };
-            
+
             utterance.onerror = (event) => {
                 setIsSpeaking(false);
                 console.error('语音播放失败:', event);
                 alert('语音播放失败，请重试');
             };
-            
+
             // 开始播放
             window.speechSynthesis.speak(utterance);
         } else {
@@ -346,13 +422,27 @@ function App() {
                                     ))}
                                 </div>
                                 <div className="chat-input">
+                                    {isRecording && (
+                                        <div className="recording-indicator" title="正在语音输入">
+                                            <span className="dot" /> 正在语音输入...
+                                        </div>
+                                    )}
                                     <textarea
                                         value={newMessage}
                                         onChange={(e) => setNewMessage(e.target.value)}
                                         onKeyPress={handleKeyPress}
-                                        placeholder={`对 ${selectedCharacter.name} 说些什么...`}
+                                        placeholder={isRecording ? `正在语音输入...` : `对 ${selectedCharacter.name} 说些什么...`}
                                         disabled={isSending}
                                     />
+                                    <button
+                                        type="button"
+                                        className={`mic-button ${isRecording ? 'recording' : ''}`}
+                                        onClick={isRecording ? stopRecording : startRecording}
+                                        title={isRecording ? '停止语音输入' : '开始语音输入'}
+                                        disabled={isSending}
+                                    >
+                                        {isRecording ? '⏹️' : '🎙️'}
+                                    </button>
                                     <button onClick={sendMessage} disabled={isSending}>
                                         {isSending ? '发送中...' : '发送'}
                                     </button>

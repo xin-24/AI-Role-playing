@@ -236,6 +236,65 @@ main {
     text-align: left;
 }
 
+/* 语音输入按钮样式 */
+.mic-button {
+    margin-left: 10px;
+    padding: 10px 14px;
+    background-color: #6c757d;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    align-self: flex-end;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mic-button:hover {
+    background-color: #5a6268;
+}
+
+.mic-button.recording {
+    background-color: #dc3545;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.2);
+}
+
+/* 录音状态提示 */
+.recording-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #dc3545;
+    font-size: 14px;
+    margin-right: 10px;
+}
+
+.recording-indicator .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #dc3545;
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+    animation: pulse 1.2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+    }
+
+    70% {
+        box-shadow: 0 0 0 8px rgba(220, 53, 69, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+    }
+}
+
 .add-character-section div {
     margin-bottom: 15px;
 }
