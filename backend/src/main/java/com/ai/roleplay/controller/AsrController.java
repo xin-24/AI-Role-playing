@@ -3,6 +3,7 @@ package com.ai.roleplay.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -22,5 +23,10 @@ public class AsrController {
     @PostMapping(value = "/transcribe", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public String transcribe(@RequestParam("file") MultipartFile file) {
         return qiniuAsrService.transcribe(file);
+    }
+
+    @GetMapping("/transcribe")
+    public String transcribeByUrl(@RequestParam("url") String url) {
+        return qiniuAsrService.transcribeByUrl(url);
     }
 }

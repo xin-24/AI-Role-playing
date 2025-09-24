@@ -130,6 +130,13 @@
             <version>20230227</version>
         </dependency>
 
+        <!-- Java WebSocket Client -->
+        <dependency>
+            <groupId>org.java-websocket</groupId>
+            <artifactId>Java-WebSocket</artifactId>
+            <version>1.5.3</version>
+        </dependency>
+
 
         
         <!-- Test dependencies -->

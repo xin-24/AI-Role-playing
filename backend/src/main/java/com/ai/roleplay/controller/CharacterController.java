@@ -28,7 +28,7 @@ public class CharacterController {
     @GetMapping("/search")
     public List<Character> searchCharacters(@RequestParam("keyword") String keyword) {
         return characterRepository
-                .findByNameContainingOrDescriptionContainingOrPersonalityTraitsContainingOrBackgroundStoryContaining(
+                .findByNameContainingOrDescriptionContainingOrPersonalityTraitsContainingOrBackgroundStoryContainingAllIgnoreCase(
                         keyword, keyword, keyword, keyword);
     }
 
