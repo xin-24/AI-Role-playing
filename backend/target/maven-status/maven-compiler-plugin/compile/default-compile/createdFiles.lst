@@ -1,9 +1,11 @@
 com/ai/roleplay/repository/CharacterRepository.class
 com/ai/roleplay/controller/CharacterController.class
+com/ai/roleplay/controller/TtsController.class
 com/ai/roleplay/model/Character.class
 com/ai/roleplay/service/QiniuAIService.class
 com/ai/roleplay/config/WebConfig.class
 com/ai/roleplay/controller/AsrController.class
+com/ai/roleplay/service/QiniuTtsService.class
 com/ai/roleplay/config/QiniuAIConfig.class
 com/ai/roleplay/service/QiniuAsrService.class
 com/ai/roleplay/controller/ChatMessageController.class
@@ -11,3 +13,4 @@ com/ai/roleplay/model/ChatMessage.class
 com/ai/roleplay/config/QiniuASRConfig.class
 com/ai/roleplay/Application.class
 com/ai/roleplay/repository/ChatMessageRepository.class
+com/ai/roleplay/config/QiniuTTSConfig.class

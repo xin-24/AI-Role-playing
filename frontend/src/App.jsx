@@ -267,65 +267,71 @@ function App() {
     const playVoice = async (message) => {
         if (!message.trim()) return;
 
+        // 优先使用后端TTS（带超时与响应校验）
+        try {
+            const TTS_REQUEST_TIMEOUT_MS = 10000;
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), TTS_REQUEST_TIMEOUT_MS);
+            setIsSpeaking(true);
+            // 使用POST请求发送JSON数据，避免URL编码问题
+            const resp = await fetch(`http://localhost:8082/api/tts/speak`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    text: message,
+                    format: 'mp3'
+                }),
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            if (!resp.ok) throw new Error(`TTS接口错误: ${resp.status}`);
+            const contentType = resp.headers.get('content-type') || '';
+            if (!contentType.includes('audio')) throw new Error(`返回非音频类型: ${contentType}`);
+            const arrayBuffer = await resp.arrayBuffer();
+            if (!arrayBuffer || arrayBuffer.byteLength === 0) throw new Error('音频为空');
+            const blob = new Blob([arrayBuffer], { type: contentType });
+            const url = URL.createObjectURL(blob);
+            const audio = new Audio(url);
+            audio.onended = () => {
+                setIsSpeaking(false);
+                URL.revokeObjectURL(url);
+            };
+            audio.onerror = () => {
+                setIsSpeaking(false);
+                URL.revokeObjectURL(url);
+            };
+            await audio.play();
+            return; // 成功则不再回退
+        } catch (e) {
+            console.warn('后端TTS失败，回退到浏览器TTS:', e);
+            setIsSpeaking(false);
+        }
+
+        // 回退到浏览器SpeechSynthesis
         if ('speechSynthesis' in window) {
-            // 停止当前正在播放的语音
             if (isSpeaking) {
                 window.speechSynthesis.cancel();
                 setIsSpeaking(false);
             }
-
-            // 创建语音对象
             const utterance = new SpeechSynthesisUtterance(message);
-
-            // 设置语音参数
-            utterance.rate = 1; // 语速 (0.1 - 10)
-            utterance.pitch = 1; // 音调 (0 - 2)
-            utterance.volume = 1; // 音量 (0 - 1)
-
-            // 选择合适的语音（优先选择中文语音）
+            utterance.rate = 1;
+            utterance.pitch = 1;
+            utterance.volume = 1;
             let selectedVoice = null;
             if (availableVoices.length > 0) {
-                // 优先选择中文语音
-                selectedVoice = availableVoices.find(voice =>
-                    voice.lang.includes('zh') || voice.lang.includes('CN') || voice.lang.includes('TW')
-                );
-
-                // 如果没有中文语音，则选择英文语音
-                if (!selectedVoice) {
-                    selectedVoice = availableVoices.find(voice =>
-                        voice.lang.includes('en')
-                    );
-                }
-
-                // 如果还是没有找到，则使用第一个语音
-                if (!selectedVoice) {
-                    selectedVoice = availableVoices[0];
-                }
-
+                selectedVoice = availableVoices.find(voice => voice.lang.includes('zh') || voice.lang.includes('CN') || voice.lang.includes('TW'))
+                    || availableVoices.find(voice => voice.lang.includes('en'))
+                    || availableVoices[0];
                 utterance.voice = selectedVoice;
             }
-
-            // 设置事件监听器
-            utterance.onstart = () => {
-                setIsSpeaking(true);
-                console.log('开始播放语音');
-            };
-
-            utterance.onend = () => {
-                setIsSpeaking(false);
-                console.log('语音播放完成');
-            };
-
-            utterance.onerror = (event) => {
-                setIsSpeaking(false);
-                console.error('语音播放失败:', event);
-                alert('语音播放失败，请重试');
-            };
-
-            // 开始播放
+            utterance.onstart = () => setIsSpeaking(true);
+            utterance.onend = () => setIsSpeaking(false);
+            utterance.onerror = () => setIsSpeaking(false);
             window.speechSynthesis.speak(utterance);
         } else {
-            alert('当前浏览器不支持Web Speech API');
+            alert('无法播放语音');
         }
     };
 
