@@ -8,7 +8,8 @@ function App() {
         name: '',
         description: '',
         personalityTraits: '',
-        backgroundStory: ''
+        backgroundStory: '',
+        voiceType: ''
     });
     const [selectedCharacter, setSelectedCharacter] = useState(null);
     const [chatMessages, setChatMessages] = useState([]);
@@ -144,6 +145,83 @@ function App() {
         }
     };
 
+    // 获取所有音色选项
+    const fetchVoiceList = async () => {
+        try {
+            const response = await fetch('http://localhost:8082/api/characters/voices');
+            const data = await response.json();
+            setAvailableVoices(data);
+        } catch (error) {
+            console.error('获取音色列表失败:', error);
+            // 使用默认音色列表
+            setAvailableVoices([
+                { voice_name: "温婉学科讲师", voice_type: "qiniu_zh_female_wwxkjx" },
+                { voice_name: "甜美教学小源", voice_type: "qiniu_zh_female_tmjxxy" },
+                { voice_name: "校园清新学姐", voice_type: "qiniu_zh_female_xyqxxj" },
+                { voice_name: "邻家辅导学长", voice_type: "qiniu_zh_male_ljfdxz" },
+                { voice_name: "温和学科小哥", voice_type: "qiniu_zh_male_whxkxg" }
+            ]);
+        }
+    };
+
+    // 预览音色
+    const previewVoice = async (voiceType) => {
+        if (!voiceType) return;
+
+        try {
+            const text = "你好，我是您的AI助手";
+            const resp = await fetch(`http://localhost:8082/api/tts/speak`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    text: text,
+                    voice: voiceType,
+                    format: 'mp3'
+                })
+            });
+
+            if (!resp.ok) throw new Error(`TTS接口错误: ${resp.status}`);
+            const contentType = resp.headers.get('content-type') || '';
+            if (!contentType.includes('audio')) throw new Error(`返回非音频类型: ${contentType}`);
+            const arrayBuffer = await resp.arrayBuffer();
+            if (!arrayBuffer || arrayBuffer.byteLength === 0) throw new Error('音频为空');
+            const blob = new Blob([arrayBuffer], { type: contentType });
+            const url = URL.createObjectURL(blob);
+            const audio = new Audio(url);
+            audio.onended = () => URL.revokeObjectURL(url);
+            audio.onerror = () => URL.revokeObjectURL(url);
+            await audio.play();
+        } catch (e) {
+            console.error('音色预览失败:', e);
+            alert('音色预览失败');
+        }
+    };
+
+    // 推荐音色（根据角色特征）
+    const recommendVoice = () => {
+        const { description, personalityTraits, backgroundStory } = newCharacter;
+        const characterText = `${description} ${personalityTraits} ${backgroundStory}`.toLowerCase();
+
+        // 简单的关键词匹配逻辑
+        if (characterText.includes("老师") || characterText.includes("教师") || characterText.includes("讲师")) {
+            return "qiniu_zh_female_wwxkjx"; // 温婉学科讲师
+        }
+        if (characterText.includes("学生") || characterText.includes("学长") || characterText.includes("学姐") || characterText.includes("校园")) {
+            return "qiniu_zh_female_xyqxxj"; // 校园清新学姐
+        }
+        if (characterText.includes("温柔") || characterText.includes("温和") || characterText.includes("知性")) {
+            return "qiniu_zh_female_tmjxxy"; // 甜美教学小源
+        }
+        if (characterText.includes("年轻") || characterText.includes("活泼") || characterText.includes("开朗")) {
+            return "qiniu_zh_male_ljfdxz"; // 邻家辅导学长
+        }
+
+        // 默认音色
+        return "qiniu_zh_female_wwxkjx";
+    };
+
     // 搜索角色
     const searchCharacters = async () => {
         if (!searchTerm.trim()) {
@@ -162,13 +240,19 @@ function App() {
 
     // 创建新角色
     const createCharacter = async () => {
+        // 如果没有选择音色，使用推荐音色
+        const characterData = {
+            ...newCharacter,
+            voiceType: newCharacter.voiceType || recommendVoice()
+        };
+
         try {
             const response = await fetch('http://localhost:8082/api/characters', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(newCharacter),
+                body: JSON.stringify(characterData),
             });
 
             if (response.ok) {
@@ -179,7 +263,8 @@ function App() {
                     name: '',
                     description: '',
                     personalityTraits: '',
-                    backgroundStory: ''
+                    backgroundStory: '',
+                    voiceType: ''
                 });
             }
         } catch (error) {
@@ -264,7 +349,7 @@ function App() {
     };
 
     // 使用Web Speech API播放语音
-    const playVoice = async (message) => {
+    const playVoice = async (message, characterVoiceType) => {
         if (!message.trim()) return;
 
         // 优先使用后端TTS（带超时与响应校验）
@@ -273,7 +358,8 @@ function App() {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), TTS_REQUEST_TIMEOUT_MS);
             setIsSpeaking(true);
-            // 使用POST请求发送JSON数据，避免URL编码问题
+
+            // 使用POST请求发送JSON数据，包含角色特定音色
             const resp = await fetch(`http://localhost:8082/api/tts/speak`, {
                 method: 'POST',
                 headers: {
@@ -281,6 +367,7 @@ function App() {
                 },
                 body: JSON.stringify({
                     text: message,
+                    voice: characterVoiceType, // 使用角色特定音色
                     format: 'mp3'
                 }),
                 signal: controller.signal
@@ -403,6 +490,9 @@ function App() {
                                     <p><strong>描述:</strong> {character.description}</p>
                                     <p><strong>性格特征:</strong> {character.personalityTraits}</p>
                                     <p><strong>背景故事:</strong> {character.backgroundStory}</p>
+                                    {character.voiceType && (
+                                        <p><strong>角色音色:</strong> {character.voiceType}</p>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -421,7 +511,7 @@ function App() {
                                                 {!msg.isUserMessage && (
                                                     <button
                                                         className="voice-button"
-                                                        onClick={() => playVoice(msg.message)}
+                                                        onClick={() => playVoice(msg.message, selectedCharacter.voiceType)}
                                                         title={isSpeaking ? "停止播放" : "播放语音"}
                                                         disabled={!msg.message.trim()}
                                                     >
@@ -518,6 +608,37 @@ function App() {
                                 onChange={handleInputChange}
                                 required
                             />
+                        </div>
+                        <div>
+                            <select
+                                name="voiceType"
+                                value={newCharacter.voiceType}
+                                onChange={handleInputChange}
+                            >
+                                <option value="">自动推荐音色</option>
+                                <option value="qiniu_zh_female_wwxkjx">温婉学科讲师</option>
+                                <option value="qiniu_zh_female_tmjxxy">甜美教学小源</option>
+                                <option value="qiniu_zh_female_xyqxxj">校园清新学姐</option>
+                                <option value="qiniu_zh_male_ljfdxz">邻家辅导学长</option>
+                                <option value="qiniu_zh_male_whxkxg">温和学科小哥</option>
+                                <option value="qiniu_zh_male_wncwxz">温暖沉稳学长</option>
+                                <option value="qiniu_zh_male_ybxknjs">渊博学科男教师</option>
+                                <option value="qiniu_zh_male_tyygjs">通用阳光讲师</option>
+                                <option value="qiniu_zh_female_glktss">干练课堂思思</option>
+                                <option value="qiniu_zh_female_ljfdxx">邻家辅导学姐</option>
+                                <option value="qiniu_zh_female_kljxdd">开朗教学督导</option>
+                                <option value="qiniu_zh_female_zxjxnjs">知性教学女教师</option>
+                            </select>
+                            {newCharacter.voiceType && (
+                                <button type="button" onClick={() => previewVoice(newCharacter.voiceType)}>
+                                    试听音色
+                                </button>
+                            )}
+                            {!newCharacter.voiceType && (
+                                <button type="button" onClick={() => previewVoice(recommendVoice())}>
+                                    试听推荐音色
+                                </button>
+                            )}
                         </div>
                         <button type="submit">添加角色</button>
                     </form>

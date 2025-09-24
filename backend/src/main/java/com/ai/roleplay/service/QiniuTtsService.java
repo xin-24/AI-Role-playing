@@ -41,13 +41,13 @@ public class QiniuTtsService {
 
             // 根据用户提供的示例构建请求体
             JSONObject body = new JSONObject();
-            
+
             JSONObject audio = new JSONObject();
             audio.put("voice_type", useVoice);
             audio.put("encoding", useFormat);
             audio.put("speed_ratio", 1.0);
             body.put("audio", audio);
-            
+
             JSONObject request = new JSONObject();
             request.put("text", text);
             body.put("request", request);

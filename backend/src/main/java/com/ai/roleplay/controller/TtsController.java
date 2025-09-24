@@ -26,9 +26,14 @@ public class TtsController {
     @PostMapping(value = "/speak", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<byte[]> speak(@RequestBody Map<String, String> request) {
         String text = request.get("text");
-        String voice = request.get("voice");
+        String voice = request.get("voice"); // 角色特定音色
         String format = request.get("format");
-        
+
+        // 如果没有指定音色，使用默认音色
+        if (voice == null || voice.isEmpty()) {
+            voice = "qiniu_zh_female_wwxkjx"; // 默认音色
+        }
+
         byte[] audioBytes = ttsService.synthesize(text, voice, format);
         MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
         if ("mp3".equalsIgnoreCase(format)) {
