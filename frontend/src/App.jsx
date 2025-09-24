@@ -18,8 +18,11 @@ function App() {
     // Web Speech API相关状态
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [availableVoices, setAvailableVoices] = useState([]);
-    // 语音输入相关
+    // 语音输入相关（改为MediaRecorder -> 后端ASR转写）
     const [isRecording, setIsRecording] = useState(false);
+    const [isTranscribing, setIsTranscribing] = useState(false);
+    const mediaRecorderRef = useRef(null);
+    const recordedChunksRef = useRef([]);
     const recognitionRef = useRef(null);
 
     // 获取所有角色
@@ -29,76 +32,78 @@ function App() {
         initSpeechSynthesis();
     }, []);
 
-    // 初始化语音识别（Web Speech API）
+    // 不再使用浏览器本地识别，改为MediaRecorder + 后端转写
     useEffect(() => {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SpeechRecognition) {
-            return; // 浏览器不支持
-        }
-        const recognition = new SpeechRecognition();
-        recognition.lang = 'zh-CN';
-        recognition.continuous = true;
-        recognition.interimResults = true;
-
-        recognition.onresult = (event) => {
-            let interimTranscript = '';
-            let finalTranscript = '';
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-                const transcript = event.results[i][0].transcript;
-                if (event.results[i].isFinal) {
-                    finalTranscript += transcript;
-                } else {
-                    interimTranscript += transcript;
-                }
-            }
-            // 将识别文本填充到输入框（保留已有内容）
-            if (finalTranscript) {
-                setNewMessage(prev => (prev ? prev + ' ' : '') + finalTranscript.trim());
-            }
-        };
-
-        recognition.onerror = (e) => {
-            console.error('Speech recognition error:', e);
-            setIsRecording(false);
-        };
-
-        recognition.onend = () => {
-            setIsRecording(false);
-        };
-
-        recognitionRef.current = recognition;
-
-        return () => {
-            try {
-                recognition.stop();
-            } catch (_) { }
-        };
+        recognitionRef.current = null;
     }, []);
 
-    const startRecording = () => {
-        if (isRecording) return;
-        const recognition = recognitionRef.current;
-        if (!recognition) {
-            alert('当前浏览器不支持语音输入');
-            return;
-        }
+    const startRecording = async () => {
+        if (isRecording || isTranscribing) return;
         try {
-            recognition.start();
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const options = { mimeType: 'audio/webm' };
+            const mediaRecorder = new MediaRecorder(stream, options);
+            recordedChunksRef.current = [];
+
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data && event.data.size > 0) {
+                    recordedChunksRef.current.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = async () => {
+                const blob = new Blob(recordedChunksRef.current, { type: 'audio/webm' });
+                // 释放麦克风
+                stream.getTracks().forEach(t => t.stop());
+                await uploadAndTranscribe(blob);
+            };
+
+            mediaRecorderRef.current = mediaRecorder;
+            mediaRecorder.start();
             setIsRecording(true);
         } catch (e) {
-            console.error('start recognition failed', e);
+            console.error('无法开始录音:', e);
+            alert('无法访问麦克风，请检查浏览器权限设置');
         }
     };
 
     const stopRecording = () => {
-        const recognition = recognitionRef.current;
-        if (!recognition) return;
+        const mr = mediaRecorderRef.current;
+        if (mr && mr.state !== 'inactive') {
+            try {
+                mr.stop();
+            } catch (e) {
+                console.error('停止录音失败', e);
+            }
+        }
+        setIsRecording(false);
+    };
+
+    const uploadAndTranscribe = async (blob) => {
+        setIsTranscribing(true);
         try {
-            recognition.stop();
-        } catch (e) {
-            console.error('stop recognition failed', e);
+            const form = new FormData();
+            const file = new File([blob], 'record.webm', { type: 'audio/webm' });
+            form.append('file', file);
+            const resp = await fetch('http://localhost:8082/api/asr/transcribe', {
+                method: 'POST',
+                body: form,
+            });
+            if (!resp.ok) {
+                const text = await resp.text();
+                throw new Error(text || 'ASR服务返回错误');
+            }
+            const text = await resp.text();
+            if (text) {
+                const finalText = text.trim();
+                setNewMessage(prev => (prev ? prev + ' ' : '') + finalText);
+                await sendMessageWithText(finalText);
+            }
+        } catch (err) {
+            console.error('转写失败:', err);
+            alert('语音转文本失败，请重试');
         } finally {
-            setIsRecording(false);
+            setIsTranscribing(false);
         }
     };
 
@@ -202,16 +207,22 @@ function App() {
     const sendMessage = async () => {
         if (!newMessage.trim() || !selectedCharacter || isSending) return;
 
+        await sendMessageWithText(newMessage);
+    };
+
+    // 直接用指定文本发送（用于ASR转写后自动发送）
+    const sendMessageWithText = async (messageText) => {
+        const text = (messageText || '').trim();
+        if (!text || !selectedCharacter || isSending) return;
+
         setIsSending(true);
 
-        // 添加用户消息到界面
         const userMessage = {
             characterId: selectedCharacter.id,
-            message: newMessage,
+            message: text,
             isUserMessage: true
         };
 
-        // 立即更新界面显示用户消息
         const updatedMessages = [...chatMessages, userMessage];
         setChatMessages(updatedMessages);
         setNewMessage('');
@@ -226,14 +237,12 @@ function App() {
             });
 
             if (response.ok) {
-                // 重新获取聊天历史以包含AI回复
                 const historyResponse = await fetch(`http://localhost:8082/api/chat/history/${selectedCharacter.id}`);
                 if (historyResponse.ok) {
                     const updatedChatHistory = await historyResponse.json();
                     setChatMessages(updatedChatHistory);
                 }
             } else {
-                // 如果发送失败，显示错误消息
                 const errorMessage = {
                     characterId: selectedCharacter.id,
                     message: "抱歉，消息发送失败，请重试。",
@@ -243,7 +252,6 @@ function App() {
             }
         } catch (error) {
             console.error('发送消息失败:', error);
-            // 显示错误消息
             const errorMessage = {
                 characterId: selectedCharacter.id,
                 message: "抱歉，消息发送失败，请检查网络连接。",
@@ -427,19 +435,22 @@ function App() {
                                             <span className="dot" /> 正在语音输入...
                                         </div>
                                     )}
+                                    {isTranscribing && (
+                                        <div className="transcribing-indicator" title="正在转写">正在转写...</div>
+                                    )}
                                     <textarea
                                         value={newMessage}
                                         onChange={(e) => setNewMessage(e.target.value)}
                                         onKeyPress={handleKeyPress}
-                                        placeholder={isRecording ? `正在语音输入...` : `对 ${selectedCharacter.name} 说些什么...`}
-                                        disabled={isSending}
+                                        placeholder={isRecording ? `正在语音输入...` : (isTranscribing ? '正在转写...' : `对 ${selectedCharacter.name} 说些什么...`)}
+                                        disabled={isSending || isTranscribing}
                                     />
                                     <button
                                         type="button"
                                         className={`mic-button ${isRecording ? 'recording' : ''}`}
                                         onClick={isRecording ? stopRecording : startRecording}
                                         title={isRecording ? '停止语音输入' : '开始语音输入'}
-                                        disabled={isSending}
+                                        disabled={isSending || isTranscribing}
                                     >
                                         {isRecording ? '⏹️' : '🎙️'}
                                     </button>
