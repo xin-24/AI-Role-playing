@@ -74,7 +74,7 @@ public class QiniuOSSService {
             if (originalFilename != null && originalFilename.contains(".")) {
                 fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
             }
-            
+
             // 使用当前时间作为文件名
             String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
             String key = timestamp + fileExtension;

@@ -16,6 +16,7 @@ function App() {
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
     const chatContainerRef = useRef(null);
+    const charactersContainerRef = useRef(null);
     // Web Speech API相关状态
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [availableVoices, setAvailableVoices] = useState([]);
@@ -455,6 +456,14 @@ function App() {
         }
     };
 
+    // 停止语音播放
+    const stopVoice = () => {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            setIsSpeaking(false);
+        }
+    };
+
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setNewCharacter({
@@ -479,6 +488,12 @@ function App() {
         }
     };
 
+    // 推荐音色函数
+    const recommendVoice = () => {
+        // 这里可以根据角色特征推荐音色，暂时返回默认音色
+        return "qiniu_zh_female_wwxkjx";
+    };
+
     return (
         <div className="App">
             <header className="App-header">
@@ -501,8 +516,8 @@ function App() {
                 </section>
 
                 <div className="main-content">
-                    {/* 角色列表 */}
-                    <section className="characters-section">
+                    {/* 角色列表 - 固定在左侧 */}
+                    <section className="characters-section" ref={charactersContainerRef}>
                         <h2>可用角色</h2>
                         <div className="characters-grid">
                             {characters.map((character) => (
@@ -523,7 +538,7 @@ function App() {
                         </div>
                     </section>
 
-                    {/* 对话区域 */}
+                    {/* 对话区域 - 固定在右侧 */}
                     {selectedCharacter && (
                         <section className="chat-section">
                             <h2>与 {selectedCharacter.name} 对话</h2>

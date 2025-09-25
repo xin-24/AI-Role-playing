@@ -49,7 +49,7 @@ public class QiniuAsrService {
             if (audioUrl == null || audioUrl.trim().isEmpty()) {
                 throw new IllegalArgumentException("音频URL不能为空");
             }
-            
+
             // 使用七牛云专门的ASR端点 (使用配置的baseUrl)
             String url = qiniuASRConfig.getBaseUrl() + "/voice/asr";
 
