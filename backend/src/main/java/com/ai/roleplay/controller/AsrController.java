@@ -1,16 +1,10 @@
 package com.ai.roleplay.controller;
 
+import com.ai.roleplay.service.QiniuAsrService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
-import com.ai.roleplay.service.QiniuAsrService;
 
 @RestController
 @RequestMapping("/api/asr")
@@ -20,13 +14,29 @@ public class AsrController {
     @Autowired
     private QiniuAsrService qiniuAsrService;
 
+    /**
+     * 专门用于ASR测试的端点 - 使用data字段方式
+     */
     @PostMapping(value = "/transcribe", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public String transcribe(@RequestParam("file") MultipartFile file) {
-        return qiniuAsrService.transcribe(file);
+    public String transcribeAudio(@RequestParam("file") MultipartFile file) {
+        try {
+            // 使用data字段方式直接处理音频文件
+            return qiniuAsrService.transcribe(file);
+        } catch (Exception e) {
+            return "转录失败: " + e.getMessage();
+        }
     }
-
+    
+    /**
+     * 专门用于ASR测试的端点 - 使用URL方式
+     */
     @GetMapping("/transcribe")
-    public String transcribeByUrl(@RequestParam("url") String url) {
-        return qiniuAsrService.transcribeByUrl(url);
+    public String transcribeAudioUrl(@RequestParam("url") String audioUrl) {
+        try {
+            // 使用URL方式处理音频文件
+            return qiniuAsrService.transcribeByUrl(audioUrl);
+        } catch (Exception e) {
+            return "转录失败: " + e.getMessage();
+        }
     }
 }

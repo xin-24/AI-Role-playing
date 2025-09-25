@@ -1,0 +1,20 @@
+package com.ai.roleplay.controller;
+
+import com.ai.roleplay.service.AsrTestService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/test")
+public class AsrTestController {
+
+    @Autowired
+    private AsrTestService asrTestService;
+
+    @GetMapping("/asr")
+    public String testAsr() {
+        return asrTestService.testAsr();
+    }
+}

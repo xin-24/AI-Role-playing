@@ -1,24 +1,17 @@
 package com.ai.roleplay.service;
 
-import java.io.IOException;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.Map;
-
-import org.apache.hc.client5.http.classic.methods.HttpPost;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.core5.http.ContentType;
-import org.apache.hc.core5.http.io.entity.EntityUtils;
-import org.apache.hc.core5.http.io.entity.StringEntity;
+import com.ai.roleplay.config.QiniuASRConfig;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
-
-import com.ai.roleplay.config.QiniuASRConfig;
 
 @Service
 public class QiniuAsrService {
@@ -28,113 +21,90 @@ public class QiniuAsrService {
     @Autowired
     private QiniuASRConfig qiniuASRConfig;
 
+    @Autowired
+    private QiniuOSSService qiniuOSSService;
+
     public String transcribe(MultipartFile audioFile) {
         if (audioFile == null || audioFile.isEmpty()) {
             throw new IllegalArgumentException("音频文件不能为空");
         }
 
-        // 检测音频格式
-        String format = detectAudioFormat(audioFile);
+        try {
+            // 将音频文件上传到七牛云对象存储
+            String audioUrl = qiniuOSSService.uploadFile(audioFile);
+            logger.info("音频文件已上传到: {}", audioUrl);
 
-        try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
-            String url = qiniuASRConfig.getBaseUrl() + "/voice/asr";
-            HttpPost httpPost = new HttpPost(url);
-            httpPost.setHeader("Authorization", "Bearer " + qiniuASRConfig.getApiKey());
-            httpPost.setHeader("Content-Type", "application/json");
-
-            // 构建符合七牛云要求的请求体
-            JSONObject requestBody = buildAsrRequestBody(audioFile, format);
-
-            StringEntity entity = new StringEntity(requestBody.toString(), ContentType.APPLICATION_JSON);
-            httpPost.setEntity(entity);
-
-            logger.info("发送ASR请求: URL={}, Body={}", url, requestBody.toString());
-
-            return httpClient.execute(httpPost, response -> {
-                int status = response.getCode();
-                String respText = response.getEntity() != null ? EntityUtils.toString(response.getEntity()) : "";
-                logger.info("ASR响应状态码: {}, 响应体: {}", status, respText);
-
-                if (status == 200) {
-                    return extractTextFromResponse(respText);
-                }
-
-                String message;
-                switch (status) {
-                    case 400:
-                        message = "请求参数错误";
-                        break;
-                    case 401:
-                        message = "鉴权失败，请检查ASR API Key";
-                        break;
-                    case 403:
-                        message = "无权访问ASR服务";
-                        break;
-                    case 429:
-                        message = "调用频率超限";
-                        break;
-                    case 500:
-                        message = "ASR服务内部错误";
-                        break;
-                    default:
-                        message = "ASR调用失败，状态码: " + status;
-                }
-                throw new RuntimeException(message + "，响应: " + respText);
-            });
-        } catch (IOException e) {
-            logger.error("调用ASR服务失败: {}", e.getMessage(), e);
-            throw new RuntimeException("调用ASR服务失败: " + e.getMessage(), e);
+            // 使用URL方式进行ASR转录
+            return transcribeByUrl(audioUrl);
+        } catch (Exception e) {
+            logger.error("ASR转录失败: {}", e.getMessage(), e);
+            throw new RuntimeException("ASR转录失败: " + e.getMessage(), e);
         }
     }
 
     // 添加一个使用URL的转录方法
     public String transcribeByUrl(String audioUrl) {
-        try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
+        try {
+            // 验证音频URL是否为空
+            if (audioUrl == null || audioUrl.trim().isEmpty()) {
+                throw new IllegalArgumentException("音频URL不能为空");
+            }
+            
+            // 使用七牛云专门的ASR端点 (使用配置的baseUrl)
             String url = qiniuASRConfig.getBaseUrl() + "/voice/asr";
-            HttpPost httpPost = new HttpPost(url);
-            httpPost.setHeader("Authorization", "Bearer " + qiniuASRConfig.getApiKey());
-            httpPost.setHeader("Content-Type", "application/json");
 
-            // 构建符合七牛云要求的请求体
+            // 创建请求头
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(qiniuASRConfig.getApiKey());
+
+            // 构建符合七牛云ASR要求的请求体
             JSONObject requestBody = buildAsrRequestBodyByUrl(audioUrl);
 
-            StringEntity entity = new StringEntity(requestBody.toString(), ContentType.APPLICATION_JSON);
-            httpPost.setEntity(entity);
+            // 创建请求实体
+            HttpEntity<String> entity = new HttpEntity<>(requestBody.toString(), headers);
 
-            logger.info("发送ASR请求: URL={}, Body={}", url, requestBody.toString());
+            logger.info(
+                    "发送ASR请求: URL={}, Headers=Authorization:Bearer [REDACTED], Content-Type:application/json, Body={}",
+                    url, requestBody.toString());
 
-            return httpClient.execute(httpPost, response -> {
-                int status = response.getCode();
-                String respText = response.getEntity() != null ? EntityUtils.toString(response.getEntity()) : "";
-                logger.info("ASR响应状态码: {}, 响应体: {}", status, respText);
+            // 记录音频URL以供调试
+            logger.info("请求的音频URL: {}", audioUrl);
 
-                if (status == 200) {
-                    return extractTextFromResponse(respText);
-                }
+            // 发送请求
+            RestTemplate restTemplate = new RestTemplate();
+            ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
 
-                String message;
-                switch (status) {
-                    case 400:
-                        message = "请求参数错误";
-                        break;
-                    case 401:
-                        message = "鉴权失败，请检查ASR API Key";
-                        break;
-                    case 403:
-                        message = "无权访问ASR服务";
-                        break;
-                    case 429:
-                        message = "调用频率超限";
-                        break;
-                    case 500:
-                        message = "ASR服务内部错误";
-                        break;
-                    default:
-                        message = "ASR调用失败，状态码: " + status;
-                }
-                throw new RuntimeException(message + "，响应: " + respText);
-            });
-        } catch (IOException e) {
+            int status = response.getStatusCode().value();
+            String respText = response.getBody();
+            logger.info("ASR响应状态码: {}, 响应体: {}", status, respText);
+
+            if (status == 200) {
+                return extractTextFromResponse(respText);
+            }
+
+            String message;
+            switch (status) {
+                case 400:
+                    message = "请求参数错误";
+                    break;
+                case 401:
+                    message = "鉴权失败，请检查ASR API Key";
+                    break;
+                case 403:
+                    message = "无权访问ASR服务";
+                    break;
+                case 429:
+                    message = "调用频率超限";
+                    break;
+                case 500:
+                    message = "ASR服务内部错误";
+                    break;
+                default:
+                    message = "ASR调用失败，状态码: " + status;
+            }
+            throw new RuntimeException(message + "，响应: " + respText);
+        } catch (Exception e) {
             logger.error("调用ASR服务失败: {}", e.getMessage(), e);
             throw new RuntimeException("调用ASR服务失败: " + e.getMessage(), e);
         }
@@ -145,44 +115,55 @@ public class QiniuAsrService {
      */
     private String extractTextFromResponse(String response) {
         try {
+            logger.info("解析ASR响应: {}", response);
             JSONObject json = new JSONObject(response);
-            // 根据七牛云ASR API文档，响应结构包含data字段
+
+            // 根据七牛云ASR API文档，检查是否有错误
+            if (json.has("error")) {
+                JSONObject error = json.getJSONObject("error");
+                String errorMsg = error.optString("message", "未知错误");
+                logger.error("ASR服务返回错误: {}", errorMsg);
+                throw new RuntimeException("ASR服务错误: " + errorMsg);
+            }
+
+            // 尝试多种可能的响应格式
+            // 格式1: { "result": { "text": "识别的文本" } }
+            if (json.has("result")) {
+                JSONObject result = json.getJSONObject("result");
+                if (result.has("text")) {
+                    String text = result.getString("text").trim();
+                    logger.info("成功提取文本: {}", text);
+                    return text;
+                }
+            }
+
+            // 格式2: { "data": { "result": { "text": "识别的文本" } } }
             if (json.has("data")) {
                 JSONObject data = json.getJSONObject("data");
                 if (data.has("result")) {
                     JSONObject result = data.getJSONObject("result");
                     if (result.has("text")) {
-                        return result.getString("text").trim();
+                        String text = result.getString("text").trim();
+                        logger.info("成功提取文本: {}", text);
+                        return text;
                     }
                 }
             }
+
+            // 格式3: 直接返回文本（某些情况下）
+            if (json.has("text")) {
+                String text = json.getString("text").trim();
+                logger.info("成功提取文本: {}", text);
+                return text;
+            }
+
             // 如果没有找到text字段，返回原始响应
+            logger.warn("无法从响应中提取文本，返回原始响应: {}", response);
             return response;
         } catch (Exception e) {
             logger.error("解析ASR响应失败: {}", e.getMessage(), e);
             return response;
         }
-    }
-
-    /**
-     * 构建符合七牛云ASR要求的请求体（文件上传方式）
-     */
-    private JSONObject buildAsrRequestBody(MultipartFile audioFile, String format) throws IOException {
-        JSONObject body = new JSONObject();
-
-        // 添加模型名称
-        body.put("model", qiniuASRConfig.getModel());
-
-        // 添加音频信息
-        JSONObject audio = new JSONObject();
-        audio.put("format", format); // 使用实际的音频格式
-        
-        // 对于文件上传方式，使用data字段
-        String base64Data = Base64.getEncoder().encodeToString(audioFile.getBytes());
-        audio.put("data", base64Data);
-        body.put("audio", audio);
-
-        return body;
     }
 
     /**
@@ -198,29 +179,14 @@ public class QiniuAsrService {
         JSONObject audio = new JSONObject();
         // 根据URL后缀判断音频格式
         String format = detectAudioFormatFromUrl(audioUrl);
-        audio.put("format", format); // 使用实际的音频格式
-        // 对于URL方式，必须使用url字段
+        audio.put("format", format);
         audio.put("url", audioUrl);
         body.put("audio", audio);
 
-        return body;
-    }
+        // 添加调试日志，打印完整的请求体
+        logger.info("ASR URL请求体: {}", body.toString());
 
-    private String detectAudioFormat(MultipartFile audioFile) {
-        String contentType = audioFile.getContentType();
-        if (contentType == null)
-            return "wav";
-        Map<String, String> map = new HashMap<>();
-        map.put("audio/wav", "wav");
-        map.put("audio/x-wav", "wav");
-        map.put("audio/mpeg", "mp3");
-        map.put("audio/mp3", "mp3");
-        map.put("audio/ogg", "ogg");
-        map.put("audio/webm", "webm");
-        map.put("audio/m4a", "m4a");
-        map.put("audio/aac", "aac");
-        map.put("audio/flac", "flac");
-        return map.getOrDefault(contentType.toLowerCase(), "wav");
+        return body;
     }
 
     // 根据URL后缀判断音频格式
@@ -246,7 +212,7 @@ public class QiniuAsrService {
             return "webm";
         }
 
-        // 默认返回mp3
-        return "mp3";
+        // 默认返回wav
+        return "wav";
     }
 }

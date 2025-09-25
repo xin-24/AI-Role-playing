@@ -1,9 +1,11 @@
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/Application.java
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/config/QiniuAIConfig.java
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/config/QiniuASRConfig.java
+/Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/config/QiniuOSSConfig.java
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/config/QiniuTTSConfig.java
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/config/WebConfig.java
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/controller/AsrController.java
+/Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/controller/AsrTestController.java
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/controller/CharacterController.java
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/controller/ChatMessageController.java
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/controller/TempFileController.java
@@ -14,6 +16,8 @@
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/model/ChatMessage.java
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/repository/CharacterRepository.java
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/repository/ChatMessageRepository.java
+/Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/service/AsrTestService.java
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/service/QiniuAIService.java
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/service/QiniuAsrService.java
+/Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/service/QiniuOSSService.java
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/service/QiniuTtsService.java

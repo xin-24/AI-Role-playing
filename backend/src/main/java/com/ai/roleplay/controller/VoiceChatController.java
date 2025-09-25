@@ -48,34 +48,60 @@ public class VoiceChatController {
     private String serverPort;
 
     /**
+     * 专门用于ASR测试的端点 - 使用data字段方式
+     */
+    @PostMapping(value = "/api/asr/transcribe", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public String transcribeAudioForTest(@RequestParam("file") MultipartFile file) {
+        try {
+            // 使用data字段方式直接处理音频文件
+            return qiniuAsrService.transcribe(file);
+        } catch (Exception e) {
+            return "转录失败: " + e.getMessage();
+        }
+    }
+    
+    /**
+     * 专门用于ASR测试的端点 - 使用URL方式
+     */
+    @GetMapping("/api/asr/transcribe")
+    public String transcribeAudioUrlForTest(@RequestParam("url") String audioUrl) {
+        try {
+            // 使用URL方式处理音频文件
+            return qiniuAsrService.transcribeByUrl(audioUrl);
+        } catch (Exception e) {
+            return "转录失败: " + e.getMessage();
+        }
+    }
+
+    /**
      * 处理语音输入，转换为文本并获取AI回复
      */
     @PostMapping(value = "/send-voice", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Map<String, Object> sendVoiceMessage(
             @RequestParam("file") MultipartFile file,
             @RequestParam("characterId") Long characterId) {
-        
+
         Map<String, Object> response = new HashMap<>();
-        
+
         try {
-            // 1. 使用ASR服务将语音转换为文本 (优先使用URL方式)
+            // 1. 使用ASR服务将语音转换为文本 (优先使用data字段方式)
             String transcribedText = transcribeWithUrlStrategy(file);
-            
+
             if (transcribedText == null || transcribedText.trim().isEmpty()) {
                 response.put("success", false);
                 response.put("error", "语音转文本失败，未识别到有效内容");
                 return response;
             }
-            
+
             response.put("transcribedText", transcribedText);
-            
+
             // 2. 保存用户语音转换的文本消息
             ChatMessage userMessage = new ChatMessage();
             userMessage.setCharacterId(characterId);
             userMessage.setMessage(transcribedText);
             userMessage.setIsUserMessage(true);
             ChatMessage savedUserMessage = chatMessageRepository.save(userMessage);
-            
+
             // 3. 获取角色信息
             com.ai.roleplay.model.Character character = characterRepository.findById(characterId).orElse(null);
             if (character == null) {
@@ -83,11 +109,11 @@ public class VoiceChatController {
                 response.put("error", "未找到指定角色");
                 return response;
             }
-            
+
             // 4. 获取对话历史
             List<ChatMessage> chatHistory = chatMessageRepository
                     .findByCharacterIdOrderByCreatedAtAsc(characterId);
-            
+
             // 5. 准备对话历史数据
             List<Map<String, Object>> historyData = chatHistory.stream().map(msg -> {
                 Map<String, Object> messageMap = new HashMap<>();
@@ -95,7 +121,7 @@ public class VoiceChatController {
                 messageMap.put("message", msg.getMessage());
                 return messageMap;
             }).collect(Collectors.toList());
-            
+
             // 6. 生成AI回复
             String aiResponse = qiniuAIService.generateAIResponse(
                     character.getName(),
@@ -103,24 +129,24 @@ public class VoiceChatController {
                     character.getPersonalityTraits(),
                     character.getBackgroundStory(),
                     historyData);
-            
+
             // 7. 保存AI回复消息
             ChatMessage aiMessage = new ChatMessage();
             aiMessage.setCharacterId(characterId);
             aiMessage.setMessage(aiResponse);
             aiMessage.setIsUserMessage(false);
             ChatMessage savedAiMessage = chatMessageRepository.save(aiMessage);
-            
+
             // 8. 构建成功响应
             response.put("success", true);
             response.put("userMessage", savedUserMessage);
             response.put("aiMessage", savedAiMessage);
-            
+
         } catch (Exception e) {
             response.put("success", false);
             response.put("error", "处理语音消息时发生错误: " + e.getMessage());
         }
-        
+
         return response;
     }
 
@@ -132,28 +158,28 @@ public class VoiceChatController {
     public Map<String, Object> sendVoiceMessageByUrl(
             @RequestParam("audioUrl") String audioUrl,
             @RequestParam("characterId") Long characterId) {
-        
+
         Map<String, Object> response = new HashMap<>();
-        
+
         try {
             // 1. 使用ASR服务将语音转换为文本 (直接使用URL方式)
             String transcribedText = qiniuAsrService.transcribeByUrl(audioUrl);
-            
+
             if (transcribedText == null || transcribedText.trim().isEmpty()) {
                 response.put("success", false);
                 response.put("error", "语音转文本失败，未识别到有效内容");
                 return response;
             }
-            
+
             response.put("transcribedText", transcribedText);
-            
+
             // 2. 保存用户语音转换的文本消息
             ChatMessage userMessage = new ChatMessage();
             userMessage.setCharacterId(characterId);
             userMessage.setMessage(transcribedText);
             userMessage.setIsUserMessage(true);
             ChatMessage savedUserMessage = chatMessageRepository.save(userMessage);
-            
+
             // 3. 获取角色信息
             com.ai.roleplay.model.Character character = characterRepository.findById(characterId).orElse(null);
             if (character == null) {
@@ -161,11 +187,11 @@ public class VoiceChatController {
                 response.put("error", "未找到指定角色");
                 return response;
             }
-            
+
             // 4. 获取对话历史
             List<ChatMessage> chatHistory = chatMessageRepository
                     .findByCharacterIdOrderByCreatedAtAsc(characterId);
-            
+
             // 5. 准备对话历史数据
             List<Map<String, Object>> historyData = chatHistory.stream().map(msg -> {
                 Map<String, Object> messageMap = new HashMap<>();
@@ -173,7 +199,7 @@ public class VoiceChatController {
                 messageMap.put("message", msg.getMessage());
                 return messageMap;
             }).collect(Collectors.toList());
-            
+
             // 6. 生成AI回复
             String aiResponse = qiniuAIService.generateAIResponse(
                     character.getName(),
@@ -181,45 +207,38 @@ public class VoiceChatController {
                     character.getPersonalityTraits(),
                     character.getBackgroundStory(),
                     historyData);
-            
+
             // 7. 保存AI回复消息
             ChatMessage aiMessage = new ChatMessage();
             aiMessage.setCharacterId(characterId);
             aiMessage.setMessage(aiResponse);
             aiMessage.setIsUserMessage(false);
             ChatMessage savedAiMessage = chatMessageRepository.save(aiMessage);
-            
+
             // 8. 构建成功响应
             response.put("success", true);
             response.put("userMessage", savedUserMessage);
             response.put("aiMessage", savedAiMessage);
-            
+
         } catch (Exception e) {
             response.put("success", false);
             response.put("error", "处理语音消息时发生错误: " + e.getMessage());
         }
-        
+
         return response;
     }
 
     /**
-     * 使用URL策略进行语音转文本
-     * 优先使用URL方式，如果失败则回退到data字段方式
+     * 使用策略进行语音转文本
+     * 只使用data字段方式处理语音转文本
      */
     private String transcribeWithUrlStrategy(MultipartFile file) {
         try {
-            // 尝试使用URL方式（优先推荐）
-            String fileUrl = saveFileAndGetUrl(file);
-            return qiniuAsrService.transcribeByUrl(fileUrl);
+            // 直接使用data字段方式处理文件（更稳定可靠）
+            return qiniuAsrService.transcribe(file);
         } catch (Exception e) {
-            // 如果URL方式失败，回退到data字段方式
-            try {
-                return qiniuAsrService.transcribe(file);
-            } catch (Exception fallbackException) {
-                // 如果两种方式都失败，抛出异常
-                throw new RuntimeException("ASR转录失败: URL方式错误 - " + e.getMessage() + 
-                                         ", Data字段方式错误 - " + fallbackException.getMessage());
-            }
+            // 如果data字段方式失败，抛出异常
+            throw new RuntimeException("ASR转录失败: " + e.getMessage());
         }
     }
 
@@ -241,18 +260,18 @@ public class VoiceChatController {
             extension = originalFilename.substring(originalFilename.lastIndexOf("."));
         }
         String uniqueFilename = UUID.randomUUID().toString() + extension;
-        
+
         // 保存文件
         Path filePath = uploadDir.resolve(uniqueFilename);
         Files.write(filePath, file.getBytes());
-        
+
         // 返回文件的URL（在实际生产环境中，这里应该是公网可访问的URL）
         // 这里为了测试，我们返回本地文件路径的URL格式
         String fileUrl = String.format("http://localhost:%s/temp/%s", serverPort, uniqueFilename);
-        
+
         // 注意：在实际应用中，你需要将文件上传到OSS/CDN等可公网访问的地方
         // 这里只是一个临时的解决方案用于测试
-        
+
         return fileUrl;
     }
 }

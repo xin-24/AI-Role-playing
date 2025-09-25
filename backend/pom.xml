@@ -137,6 +137,12 @@
             <version>1.5.3</version>
         </dependency>
 
+        <!-- Qiniu OSS SDK -->
+        <dependency>
+            <groupId>com.qiniu</groupId>
+            <artifactId>qiniu-java-sdk</artifactId>
+            <version>7.12.1</version>
+        </dependency>
 
         
         <!-- Test dependencies -->

@@ -24,7 +24,6 @@ function App() {
     const [isTranscribing, setIsTranscribing] = useState(false);
     const mediaRecorderRef = useRef(null);
     const recordedChunksRef = useRef([]);
-    const recognitionRef = useRef(null);
 
     // 获取所有角色
     useEffect(() => {
@@ -33,38 +32,70 @@ function App() {
         initSpeechSynthesis();
     }, []);
 
-    // 不再使用浏览器本地识别，改为MediaRecorder + 后端转写
-    useEffect(() => {
-        recognitionRef.current = null;
-    }, []);
-
     const startRecording = async () => {
-        if (isRecording || isTranscribing) return;
+        if (isRecording || isTranscribing) {
+            console.log('录音已在进行中或正在转写中');
+            return;
+        }
+
         try {
+            console.log('请求麦克风权限...');
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const options = { mimeType: 'audio/webm' };
+            console.log('已获取麦克风权限');
+
+            // 检查浏览器支持的MIME类型，优先选择MP3或MP4格式以获得更好的兼容性
+            const mimeTypes = ['audio/mp4', 'audio/mpeg', 'audio/webm', 'audio/ogg'];
+            let mimeType = '';
+            for (const type of mimeTypes) {
+                if (MediaRecorder.isTypeSupported(type)) {
+                    mimeType = type;
+                    break;
+                }
+            }
+
+            console.log('支持的MIME类型:', mimeType);
+
+            const options = mimeType ? { mimeType } : {};
             const mediaRecorder = new MediaRecorder(stream, options);
             recordedChunksRef.current = [];
 
             mediaRecorder.ondataavailable = (event) => {
+                console.log('录音数据可用:', event.data.size);
                 if (event.data && event.data.size > 0) {
                     recordedChunksRef.current.push(event.data);
                 }
             };
 
             mediaRecorder.onstop = async () => {
-                const blob = new Blob(recordedChunksRef.current, { type: 'audio/webm' });
+                console.log('录音已停止');
+                if (recordedChunksRef.current.length === 0) {
+                    console.warn('没有录音数据');
+                    setIsRecording(false);
+                    return;
+                }
+
+                // 创建Blob时指定正确的MIME类型
+                const blob = new Blob(recordedChunksRef.current, { type: mimeType || 'audio/webm' });
+                console.log('录音Blob大小:', blob.size, '类型:', blob.type);
+
                 // 释放麦克风
                 stream.getTracks().forEach(t => t.stop());
                 await uploadAndTranscribe(blob);
             };
 
+            mediaRecorder.onerror = (event) => {
+                console.error('录音错误:', event.error);
+                setIsRecording(false);
+            };
+
             mediaRecorderRef.current = mediaRecorder;
             mediaRecorder.start();
+            console.log('录音已开始');
             setIsRecording(true);
         } catch (e) {
             console.error('无法开始录音:', e);
-            alert('无法访问麦克风，请检查浏览器权限设置');
+            alert('无法访问麦克风，请检查浏览器权限设置: ' + e.message);
+            setIsRecording(false);
         }
     };
 
@@ -72,37 +103,62 @@ function App() {
         const mr = mediaRecorderRef.current;
         if (mr && mr.state !== 'inactive') {
             try {
+                console.log('停止录音');
                 mr.stop();
             } catch (e) {
                 console.error('停止录音失败', e);
             }
+        } else {
+            console.log('录音器未激活或不存在');
         }
         setIsRecording(false);
     };
 
     const uploadAndTranscribe = async (blob) => {
+        if (blob.size === 0) {
+            console.warn('录音文件为空');
+            setIsTranscribing(false);
+            return;
+        }
+
         setIsTranscribing(true);
         try {
+            console.log('开始上传录音文件，大小:', blob.size);
             const form = new FormData();
-            const file = new File([blob], 'record.webm', { type: 'audio/webm' });
+            // 根据浏览器支持的格式创建合适的文件扩展名
+            let extension = 'webm';
+            if (blob.type.includes('mp4') || blob.type.includes('mp3') || blob.type.includes('mpeg')) {
+                extension = 'mp3';
+            } else if (blob.type.includes('ogg')) {
+                extension = 'ogg';
+            }
+
+            const file = new File([blob], `record.${extension}`, { type: blob.type });
             form.append('file', file);
+
+            // 修正API端点URL
             const resp = await fetch('http://localhost:8082/api/asr/transcribe', {
                 method: 'POST',
                 body: form,
             });
+
+            console.log('ASR响应状态:', resp.status);
             if (!resp.ok) {
                 const text = await resp.text();
+                console.error('ASR错误响应:', text);
                 throw new Error(text || 'ASR服务返回错误');
             }
             const text = await resp.text();
+            console.log('ASR识别结果:', text);
             if (text) {
                 const finalText = text.trim();
                 setNewMessage(prev => (prev ? prev + ' ' : '') + finalText);
+                // 自动发送消息
                 await sendMessageWithText(finalText);
             }
         } catch (err) {
             console.error('转写失败:', err);
-            alert('语音转文本失败，请重试');
+            alert('语音转文本失败，请重试: ' + err.message);
         } finally {
             setIsTranscribing(false);
         }
@@ -197,29 +253,6 @@ function App() {
             console.error('音色预览失败:', e);
             alert('音色预览失败');
         }
-    };
-
-    // 推荐音色（根据角色特征）
-    const recommendVoice = () => {
-        const { description, personalityTraits, backgroundStory } = newCharacter;
-        const characterText = `${description} ${personalityTraits} ${backgroundStory}`.toLowerCase();
-
-        // 简单的关键词匹配逻辑
-        if (characterText.includes("老师") || characterText.includes("教师") || characterText.includes("讲师")) {
-            return "qiniu_zh_female_wwxkjx"; // 温婉学科讲师
-        }
-        if (characterText.includes("学生") || characterText.includes("学长") || characterText.includes("学姐") || characterText.includes("校园")) {
-            return "qiniu_zh_female_xyqxxj"; // 校园清新学姐
-        }
-        if (characterText.includes("温柔") || characterText.includes("温和") || characterText.includes("知性")) {
-            return "qiniu_zh_female_tmjxxy"; // 甜美教学小源
-        }
-        if (characterText.includes("年轻") || characterText.includes("活泼") || characterText.includes("开朗")) {
-            return "qiniu_zh_male_ljfdxz"; // 邻家辅导学长
-        }
-
-        // 默认音色
-        return "qiniu_zh_female_wwxkjx";
     };
 
     // 搜索角色
@@ -419,14 +452,6 @@ function App() {
             window.speechSynthesis.speak(utterance);
         } else {
             alert('无法播放语音');
-        }
-    };
-
-    // 停止语音播放
-    const stopVoice = () => {
-        if ('speechSynthesis' in window && isSpeaking) {
-            window.speechSynthesis.cancel();
-            setIsSpeaking(false);
         }
     };
 
