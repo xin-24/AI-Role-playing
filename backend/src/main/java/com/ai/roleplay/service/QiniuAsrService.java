@@ -176,6 +176,7 @@ public class QiniuAsrService {
         // 添加音频信息
         JSONObject audio = new JSONObject();
         audio.put("format", format); // 使用实际的音频格式
+        
         // 对于文件上传方式，使用data字段
         String base64Data = Base64.getEncoder().encodeToString(audioFile.getBytes());
         audio.put("data", base64Data);

@@ -6,7 +6,10 @@
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/controller/AsrController.java
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/controller/CharacterController.java
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/controller/ChatMessageController.java
+/Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/controller/TempFileController.java
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/controller/TtsController.java
+/Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/controller/VoiceChatController.java
+/Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/controller/VoiceTestController.java
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/model/Character.java
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/model/ChatMessage.java
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/repository/CharacterRepository.java
