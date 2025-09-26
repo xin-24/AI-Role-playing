@@ -140,7 +140,7 @@ public class VoiceChatController {
 
             // 7. 按照标点符号（。！？）分割AI回复
             List<String> aiResponseSegments = splitByPunctuation(aiResponse);
-            
+
             // 保存分割后的AI回复消息
             List<ChatMessage> savedAiMessages = new ArrayList<>();
             for (String segment : aiResponseSegments) {
@@ -154,18 +154,7 @@ public class VoiceChatController {
                 }
             }
 
-            // 8. 生成TTS音频数据
-            try {
-                byte[] audioBytes = qiniuTtsService.synthesize(aiResponse, character.getVoiceType(), "mp3");
-                String base64Audio = Base64.getEncoder().encodeToString(audioBytes);
-                response.put("audioData", base64Audio);
-                response.put("audioFormat", "mp3");
-            } catch (Exception e) {
-                // 如果TTS生成失败，不中断主要流程
-                response.put("audioError", "语音生成失败: " + e.getMessage());
-            }
-
-            // 9. 构建成功响应
+            // 8. 构建成功响应
             response.put("success", true);
             response.put("userMessage", savedUserMessage);
             response.put("aiMessages", savedAiMessages);
@@ -238,7 +227,7 @@ public class VoiceChatController {
 
             // 7. 按照标点符号（。！？）分割AI回复
             List<String> aiResponseSegments = splitByPunctuation(aiResponse);
-            
+
             // 保存分割后的AI回复消息
             List<ChatMessage> savedAiMessages = new ArrayList<>();
             for (String segment : aiResponseSegments) {
@@ -252,18 +241,7 @@ public class VoiceChatController {
                 }
             }
 
-            // 8. 生成TTS音频数据
-            try {
-                byte[] audioBytes = qiniuTtsService.synthesize(aiResponse, character.getVoiceType(), "mp3");
-                String base64Audio = Base64.getEncoder().encodeToString(audioBytes);
-                response.put("audioData", base64Audio);
-                response.put("audioFormat", "mp3");
-            } catch (Exception e) {
-                // 如果TTS生成失败，不中断主要流程
-                response.put("audioError", "语音生成失败: " + e.getMessage());
-            }
-
-            // 9. 构建成功响应
+            // 8. 构建成功响应
             response.put("success", true);
             response.put("userMessage", savedUserMessage);
             response.put("aiMessages", savedAiMessages);
@@ -295,17 +273,17 @@ public class VoiceChatController {
         List<String> segments = new ArrayList<>();
         Pattern pattern = Pattern.compile("([^。！？]*[。！？])");
         Matcher matcher = pattern.matcher(text);
-        
+
         while (matcher.find()) {
             segments.add(matcher.group(1));
         }
-        
+
         // 处理最后可能剩余的部分
         String[] parts = pattern.split(text);
         if (parts.length > 0 && !parts[parts.length - 1].trim().isEmpty()) {
             segments.add(parts[parts.length - 1].trim());
         }
-        
+
         return segments;
     }
 

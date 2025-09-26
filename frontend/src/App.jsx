@@ -11,15 +11,16 @@ function App() {
         backgroundStory: '',
         voiceType: ''
     });
+    const [showAddCharacterForm, setShowAddCharacterForm] = useState(false); // 添加这行来定义showAddCharacterForm状态
     const [selectedCharacter, setSelectedCharacter] = useState(null);
     const [chatMessages, setChatMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
-    const [showAddCharacterForm, setShowAddCharacterForm] = useState(false); // 控制添加角色表单的显示
+    const [isSpeaking, setIsSpeaking] = useState(false);
+    const [currentPlayingMessage, setCurrentPlayingMessage] = useState(null);
     const chatContainerRef = useRef(null);
     const charactersContainerRef = useRef(null);
     // Web Speech API相关状态
-    const [isSpeaking, setIsSpeaking] = useState(false);
     const [availableVoices, setAvailableVoices] = useState([]);
     // 语音输入相关（改为MediaRecorder -> 后端ASR转写）
     const [isRecording, setIsRecording] = useState(false);
@@ -470,38 +471,75 @@ function App() {
         }
     };
 
-    // 将AI回复按标点符号分割成多个片段并依次显示
+    // 将AI回复按标点符号分割成多个片段并依次显示和播放
     const displayAIMessagesInSegments = async (aiMessages, characterId) => {
-        // 如果只有一条消息或者没有消息，则直接显示
-        if (aiMessages.length <= 1) {
-            setChatMessages(prevMessages => [...prevMessages, ...aiMessages]);
+        // 如果没有消息，直接返回
+        if (!aiMessages || aiMessages.length === 0) {
             return;
         }
 
-        // 依次显示每个片段，并为每条消息添加时间戳
+        // 获取角色信息
+        const character = characters.find(c => c.id === characterId);
+        
+        // 遍历所有消息片段，按顺序显示和播放
         for (let i = 0; i < aiMessages.length; i++) {
             const messageObj = { ...aiMessages[i] };
             
-            // 添加延迟以模拟逐步回复的效果
-            await new Promise(resolve => setTimeout(resolve, 500));
-
+            // 显示当前消息（立即显示）
             setChatMessages(prevMessages => [...prevMessages, messageObj]);
+            
+            // 如果有角色信息且消息不为空，则播放TTS
+            if (character && messageObj.message) {
+                try {
+                    // 播放当前片段，等待播放完成再继续下一个
+                    await playVoiceSegment(messageObj.message, character.voiceType);
+                } catch (error) {
+                    console.warn('TTS播放失败:', error);
+                }
+            }
         }
     };
 
-    // 使用Web Speech API播放语音
-    const playVoice = async (message, characterVoiceType) => {
-        if (!message.trim()) return;
+    // 播放单个片段的TTS
+    const playVoiceSegment = async (message, characterVoiceType) => {
+        if (!message.trim()) return Promise.resolve();
 
-        // 优先使用后端TTS（带超时与响应校验）
-        try {
+        return new Promise((resolve, reject) => {
+            // 设置当前播放的消息
+            setCurrentPlayingMessage(message);
+            
+            // 优先使用后端TTS（带超时与响应校验）
+            const playAudio = (audioData) => {
+                try {
+                    const blob = new Blob([audioData], { type: 'audio/mpeg' });
+                    const url = URL.createObjectURL(blob);
+                    const audio = new Audio(url);
+                    
+                    audio.onended = () => {
+                        URL.revokeObjectURL(url);
+                        setCurrentPlayingMessage(null); // 清除当前播放的消息
+                        resolve();
+                    };
+                    
+                    audio.onerror = (e) => {
+                        URL.revokeObjectURL(url);
+                        setCurrentPlayingMessage(null); // 清除当前播放的消息
+                        reject(new Error('音频播放失败'));
+                    };
+                    
+                    audio.play().catch(reject);
+                } catch (e) {
+                    setCurrentPlayingMessage(null); // 清除当前播放的消息
+                    reject(e);
+                }
+            };
+
             const TTS_REQUEST_TIMEOUT_MS = 10000;
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), TTS_REQUEST_TIMEOUT_MS);
-            setIsSpeaking(true);
 
             // 使用POST请求发送JSON数据，包含角色特定音色
-            const resp = await fetch(`http://localhost:8082/api/tts/speak`, {
+            fetch(`/api/tts/speak`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -512,54 +550,62 @@ function App() {
                     format: 'mp3'
                 }),
                 signal: controller.signal
+            }).then(resp => {
+                clearTimeout(timeoutId);
+                if (!resp.ok) throw new Error(`TTS接口错误: ${resp.status}`);
+                const contentType = resp.headers.get('content-type') || '';
+                if (!contentType.includes('audio')) throw new Error(`返回非音频类型: ${contentType}`);
+                return resp.arrayBuffer();
+            }).then(arrayBuffer => {
+                if (!arrayBuffer || arrayBuffer.byteLength === 0) throw new Error('音频为空');
+                playAudio(arrayBuffer);
+            }).catch(e => {
+                console.warn('后端TTS失败，尝试使用浏览器TTS:', e);
+                setCurrentPlayingMessage(null); // 清除当前播放的消息
+                
+                // 回退到浏览器SpeechSynthesis
+                if ('speechSynthesis' in window) {
+                    const utterance = new SpeechSynthesisUtterance(message);
+                    utterance.rate = 1;
+                    utterance.pitch = 1;
+                    utterance.volume = 1;
+                    let selectedVoice = null;
+                    if (availableVoices.length > 0) {
+                        selectedVoice = availableVoices.find(voice => voice.lang.includes('zh') || voice.lang.includes('CN') || voice.lang.includes('TW'))
+                            || availableVoices.find(voice => voice.lang.includes('en'))
+                            || availableVoices[0];
+                        utterance.voice = selectedVoice;
+                    }
+                    
+                    utterance.onend = () => {
+                        setCurrentPlayingMessage(null); // 清除当前播放的消息
+                        resolve();
+                    };
+                    utterance.onerror = () => {
+                        setCurrentPlayingMessage(null); // 清除当前播放的消息
+                        resolve(); // 即使出错也继续
+                    };
+                    
+                    window.speechSynthesis.speak(utterance);
+                } else {
+                    setCurrentPlayingMessage(null); // 清除当前播放的消息
+                    resolve(); // 如果不支持语音合成，直接完成
+                }
             });
-            clearTimeout(timeoutId);
-            if (!resp.ok) throw new Error(`TTS接口错误: ${resp.status}`);
-            const contentType = resp.headers.get('content-type') || '';
-            if (!contentType.includes('audio')) throw new Error(`返回非音频类型: ${contentType}`);
-            const arrayBuffer = await resp.arrayBuffer();
-            if (!arrayBuffer || arrayBuffer.byteLength === 0) throw new Error('音频为空');
-            const blob = new Blob([arrayBuffer], { type: contentType });
-            const url = URL.createObjectURL(blob);
-            const audio = new Audio(url);
-            audio.onended = () => {
-                setIsSpeaking(false);
-                URL.revokeObjectURL(url);
-            };
-            audio.onerror = () => {
-                setIsSpeaking(false);
-                URL.revokeObjectURL(url);
-            };
-            await audio.play();
-            return; // 成功则不再回退
-        } catch (e) {
-            console.warn('后端TTS失败，回退到浏览器TTS:', e);
-            setIsSpeaking(false);
-        }
+        });
+    };
 
-        // 回退到浏览器SpeechSynthesis
-        if ('speechSynthesis' in window) {
-            if (isSpeaking) {
-                window.speechSynthesis.cancel();
-                setIsSpeaking(false);
-            }
-            const utterance = new SpeechSynthesisUtterance(message);
-            utterance.rate = 1;
-            utterance.pitch = 1;
-            utterance.volume = 1;
-            let selectedVoice = null;
-            if (availableVoices.length > 0) {
-                selectedVoice = availableVoices.find(voice => voice.lang.includes('zh') || voice.lang.includes('CN') || voice.lang.includes('TW'))
-                    || availableVoices.find(voice => voice.lang.includes('en'))
-                    || availableVoices[0];
-                utterance.voice = selectedVoice;
-            }
-            utterance.onstart = () => setIsSpeaking(true);
-            utterance.onend = () => setIsSpeaking(false);
-            utterance.onerror = () => setIsSpeaking(false);
-            window.speechSynthesis.speak(utterance);
-        } else {
-            alert('无法播放语音');
+    // 使用Web Speech API播放语音
+    const playVoice = async (message, characterVoiceType) => {
+        if (!message.trim()) return;
+
+        setIsSpeaking(true);
+
+        try {
+            await playVoiceSegment(message, characterVoiceType);
+        } catch (e) {
+            console.error('播放语音失败:', e);
+            setIsSpeaking(false);
         }
     };
 
@@ -567,8 +613,8 @@ function App() {
     const stopVoice = () => {
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel();
-            setIsSpeaking(false);
         }
+        setCurrentPlayingMessage(null); // 清除当前播放的消息
     };
 
     const handleInputChange = (e) => {
@@ -654,17 +700,22 @@ function App() {
                                 <div className="chat-messages" ref={chatContainerRef}>
                                     {chatMessages.map((msg, index) => (
                                         <div key={index} className={`message ${msg.isUserMessage ? 'user-message' : 'ai-message'}`}>
-                                            <div className="message-content">
+                                            <div className={`message-content ${!msg.isUserMessage && currentPlayingMessage === msg.message ? 'playing' : ''}`}>
                                                 {msg.message}
                                                 {!msg.isUserMessage && (
-                                                    <button
-                                                        className="voice-button"
-                                                        onClick={() => playVoice(msg.message, selectedCharacter.voiceType)}
-                                                        title={isSpeaking ? "停止播放" : "播放语音"}
-                                                        disabled={!msg.message.trim()}
-                                                    >
-                                                        {isSpeaking ? "⏹️" : "🔊"}
-                                                    </button>
+                                                    <>
+                                                        <button
+                                                            className="voice-button"
+                                                            onClick={() => playVoice(msg.message, selectedCharacter.voiceType)}
+                                                            title={currentPlayingMessage === msg.message ? "停止播放" : "播放语音"}
+                                                            disabled={!msg.message.trim()}
+                                                        >
+                                                            {currentPlayingMessage === msg.message ? "⏹️" : "🔊"}
+                                                        </button>
+                                                        {currentPlayingMessage === msg.message && (
+                                                            <span className="voice-indicator" title="正在播放语音"></span>
+                                                        )}
+                                                    </>
                                                 )}
                                             </div>
                                             <div className="message-time">
@@ -702,7 +753,7 @@ function App() {
                                         {isSending ? '发送中...' : '发送'}
                                     </button>
                                     {/* 添加停止语音按钮 */}
-                                    {isSpeaking && (
+                                    {currentPlayingMessage && (
                                         <button onClick={stopVoice} className="stop-voice-button">
                                             停止语音
                                         </button>
@@ -711,6 +762,7 @@ function App() {
                             </div>
                         </section>
                     )}
+
                 </div>
 
                 {/* 添加新角色表单 - 仅在点击添加角色按钮后显示 */}
