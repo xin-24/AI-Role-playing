@@ -36,13 +36,6 @@ main {
     flex-wrap: wrap;
 }
 
-.search-section input {
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    min-width: 300px;
-}
-
 .search-section button {
     padding: 10px 20px;
     background-color: #007bff;
@@ -341,10 +334,25 @@ main {
     border-radius: 4px;
     cursor: pointer;
     font-size: 16px;
+    margin-right: 10px;
 }
 
 .add-character-section button:hover {
     background-color: #218838;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-start;
+}
+
+.form-actions button:nth-child(2) {
+    background-color: #6c757d;
+}
+
+.form-actions button:nth-child(2):hover {
+    background-color: #5a6268;
 }
 
 @media (max-width: 768px) {

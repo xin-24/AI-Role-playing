@@ -5,6 +5,7 @@ import com.ai.roleplay.repository.ChatMessageRepository;
 import com.ai.roleplay.repository.CharacterRepository;
 import com.ai.roleplay.service.QiniuAsrService;
 import com.ai.roleplay.service.QiniuAIService;
+import com.ai.roleplay.service.QiniuTtsService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,11 +22,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/voice-chat")
@@ -37,6 +39,9 @@ public class VoiceChatController {
 
     @Autowired
     private QiniuAIService qiniuAIService;
+
+    @Autowired
+    private QiniuTtsService qiniuTtsService;
 
     @Autowired
     private ChatMessageRepository chatMessageRepository;
@@ -59,7 +64,7 @@ public class VoiceChatController {
             return "转录失败: " + e.getMessage();
         }
     }
-    
+
     /**
      * 专门用于ASR测试的端点 - 使用URL方式
      */
@@ -137,7 +142,18 @@ public class VoiceChatController {
             aiMessage.setIsUserMessage(false);
             ChatMessage savedAiMessage = chatMessageRepository.save(aiMessage);
 
-            // 8. 构建成功响应
+            // 8. 生成TTS音频数据
+            try {
+                byte[] audioBytes = qiniuTtsService.synthesize(aiResponse, character.getVoiceType(), "mp3");
+                String base64Audio = Base64.getEncoder().encodeToString(audioBytes);
+                response.put("audioData", base64Audio);
+                response.put("audioFormat", "mp3");
+            } catch (Exception e) {
+                // 如果TTS生成失败，不中断主要流程
+                response.put("audioError", "语音生成失败: " + e.getMessage());
+            }
+
+            // 9. 构建成功响应
             response.put("success", true);
             response.put("userMessage", savedUserMessage);
             response.put("aiMessage", savedAiMessage);
@@ -215,7 +231,18 @@ public class VoiceChatController {
             aiMessage.setIsUserMessage(false);
             ChatMessage savedAiMessage = chatMessageRepository.save(aiMessage);
 
-            // 8. 构建成功响应
+            // 8. 生成TTS音频数据
+            try {
+                byte[] audioBytes = qiniuTtsService.synthesize(aiResponse, character.getVoiceType(), "mp3");
+                String base64Audio = Base64.getEncoder().encodeToString(audioBytes);
+                response.put("audioData", base64Audio);
+                response.put("audioFormat", "mp3");
+            } catch (Exception e) {
+                // 如果TTS生成失败，不中断主要流程
+                response.put("audioError", "语音生成失败: " + e.getMessage());
+            }
+
+            // 9. 构建成功响应
             response.put("success", true);
             response.put("userMessage", savedUserMessage);
             response.put("aiMessage", savedAiMessage);

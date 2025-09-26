@@ -15,6 +15,7 @@ function App() {
     const [chatMessages, setChatMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
+    const [showAddCharacterForm, setShowAddCharacterForm] = useState(false); // 控制添加角色表单的显示
     const chatContainerRef = useRef(null);
     const charactersContainerRef = useRef(null);
     // Web Speech API相关状态
@@ -136,9 +137,10 @@ function App() {
 
             const file = new File([blob], `record.${extension}`, { type: blob.type });
             form.append('file', file);
+            form.append('characterId', selectedCharacter.id);
 
             // 修正API端点URL
-            const resp = await fetch('http://localhost:8082/api/asr/transcribe', {
+            const resp = await fetch('http://localhost:8082/api/voice-chat/send-voice', {
                 method: 'POST',
                 body: form,
             });
@@ -149,13 +151,46 @@ function App() {
                 console.error('ASR错误响应:', text);
                 throw new Error(text || 'ASR服务返回错误');
             }
-            const text = await resp.text();
-            console.log('ASR识别结果:', text);
-            if (text) {
-                const finalText = text.trim();
-                setNewMessage(prev => (prev ? prev + ' ' : '') + finalText);
-                // 自动发送消息
-                await sendMessageWithText(finalText);
+            const result = await resp.json();
+            console.log('ASR识别结果:', result);
+
+            if (result.success) {
+                // 设置用户消息
+                if (result.transcribedText) {
+                    const finalText = result.transcribedText.trim();
+                    setNewMessage(prev => (prev ? prev + ' ' : '') + finalText);
+                }
+
+                // 获取更新后的聊天历史
+                const historyResponse = await fetch(`http://localhost:8082/api/chat/history/${selectedCharacter.id}`);
+                if (historyResponse.ok) {
+                    const updatedChatHistory = await historyResponse.json();
+                    setChatMessages(updatedChatHistory);
+
+                    // 如果有音频数据，自动播放
+                    if (result.audioData) {
+                        try {
+                            const audioBytes = Uint8Array.from(atob(result.audioData), c => c.charCodeAt(0));
+                            const blob = new Blob([audioBytes], { type: 'audio/mpeg' });
+                            const url = URL.createObjectURL(blob);
+                            const audio = new Audio(url);
+                            audio.onended = () => {
+                                setIsSpeaking(false);
+                                URL.revokeObjectURL(url);
+                            };
+                            audio.onerror = () => {
+                                setIsSpeaking(false);
+                                URL.revokeObjectURL(url);
+                            };
+                            setIsSpeaking(true);
+                            await audio.play();
+                        } catch (audioError) {
+                            console.error('播放TTS音频失败:', audioError);
+                        }
+                    }
+                }
+            } else {
+                throw new Error(result.error || '语音处理失败');
             }
         } catch (err) {
             console.error('转写失败:', err);
@@ -356,10 +391,43 @@ function App() {
             });
 
             if (response.ok) {
-                const historyResponse = await fetch(`http://localhost:8082/api/chat/history/${selectedCharacter.id}`);
-                if (historyResponse.ok) {
-                    const updatedChatHistory = await historyResponse.json();
-                    setChatMessages(updatedChatHistory);
+                const result = await response.json();
+                if (result.success) {
+                    // 更新聊天历史
+                    const historyResponse = await fetch(`http://localhost:8082/api/chat/history/${selectedCharacter.id}`);
+                    if (historyResponse.ok) {
+                        const updatedChatHistory = await historyResponse.json();
+                        setChatMessages(updatedChatHistory);
+
+                        // 如果有音频数据，自动播放
+                        if (result.audioData) {
+                            try {
+                                const audioBytes = Uint8Array.from(atob(result.audioData), c => c.charCodeAt(0));
+                                const blob = new Blob([audioBytes], { type: 'audio/mpeg' });
+                                const url = URL.createObjectURL(blob);
+                                const audio = new Audio(url);
+                                audio.onended = () => {
+                                    setIsSpeaking(false);
+                                    URL.revokeObjectURL(url);
+                                };
+                                audio.onerror = () => {
+                                    setIsSpeaking(false);
+                                    URL.revokeObjectURL(url);
+                                };
+                                setIsSpeaking(true);
+                                await audio.play();
+                            } catch (audioError) {
+                                console.error('播放TTS音频失败:', audioError);
+                            }
+                        }
+                    }
+                } else {
+                    const errorMessage = {
+                        characterId: selectedCharacter.id,
+                        message: result.error || "抱歉，消息发送失败，请重试。",
+                        isUserMessage: false
+                    };
+                    setChatMessages([...updatedMessages, errorMessage]);
                 }
             } else {
                 const errorMessage = {
@@ -504,6 +572,7 @@ function App() {
                 {/* 搜索框 */}
                 <section className="search-section">
                     <form onSubmit={handleSearchSubmit}>
+                        <button type="button" onClick={() => setShowAddCharacterForm(true)}>添加角色</button>
                         <input
                             type="text"
                             placeholder="搜索角色..."
@@ -605,84 +674,89 @@ function App() {
                     )}
                 </div>
 
-                {/* 添加新角色表单 */}
-                <section className="add-character-section">
-                    <h2>添加新角色</h2>
-                    <form onSubmit={(e) => {
-                        e.preventDefault();
-                        createCharacter();
-                    }}>
-                        <div>
-                            <input
-                                type="text"
-                                name="name"
-                                placeholder="角色名称"
-                                value={newCharacter.name}
-                                onChange={handleInputChange}
-                                required
-                            />
-                        </div>
-                        <div>
-                            <textarea
-                                name="description"
-                                placeholder="角色描述"
-                                value={newCharacter.description}
-                                onChange={handleInputChange}
-                                required
-                            />
-                        </div>
-                        <div>
-                            <textarea
-                                name="personalityTraits"
-                                placeholder="性格特征"
-                                value={newCharacter.personalityTraits}
-                                onChange={handleInputChange}
-                                required
-                            />
-                        </div>
-                        <div>
-                            <textarea
-                                name="backgroundStory"
-                                placeholder="背景故事"
-                                value={newCharacter.backgroundStory}
-                                onChange={handleInputChange}
-                                required
-                            />
-                        </div>
-                        <div>
-                            <select
-                                name="voiceType"
-                                value={newCharacter.voiceType}
-                                onChange={handleInputChange}
-                            >
-                                <option value="">自动推荐音色</option>
-                                <option value="qiniu_zh_female_wwxkjx">温婉学科讲师</option>
-                                <option value="qiniu_zh_female_tmjxxy">甜美教学小源</option>
-                                <option value="qiniu_zh_female_xyqxxj">校园清新学姐</option>
-                                <option value="qiniu_zh_male_ljfdxz">邻家辅导学长</option>
-                                <option value="qiniu_zh_male_whxkxg">温和学科小哥</option>
-                                <option value="qiniu_zh_male_wncwxz">温暖沉稳学长</option>
-                                <option value="qiniu_zh_male_ybxknjs">渊博学科男教师</option>
-                                <option value="qiniu_zh_male_tyygjs">通用阳光讲师</option>
-                                <option value="qiniu_zh_female_glktss">干练课堂思思</option>
-                                <option value="qiniu_zh_female_ljfdxx">邻家辅导学姐</option>
-                                <option value="qiniu_zh_female_kljxdd">开朗教学督导</option>
-                                <option value="qiniu_zh_female_zxjxnjs">知性教学女教师</option>
-                            </select>
-                            {newCharacter.voiceType && (
-                                <button type="button" onClick={() => previewVoice(newCharacter.voiceType)}>
-                                    试听音色
-                                </button>
-                            )}
-                            {!newCharacter.voiceType && (
-                                <button type="button" onClick={() => previewVoice(recommendVoice())}>
-                                    试听推荐音色
-                                </button>
-                            )}
-                        </div>
-                        <button type="submit">添加角色</button>
-                    </form>
-                </section>
+                {/* 添加新角色表单 - 仅在点击添加角色按钮后显示 */}
+                {showAddCharacterForm && (
+                    <section className="add-character-section">
+                        <h2>添加新角色</h2>
+                        <form onSubmit={(e) => {
+                            e.preventDefault();
+                            createCharacter();
+                        }}>
+                            <div>
+                                <input
+                                    type="text"
+                                    name="name"
+                                    placeholder="角色名称"
+                                    value={newCharacter.name}
+                                    onChange={handleInputChange}
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <textarea
+                                    name="description"
+                                    placeholder="角色描述"
+                                    value={newCharacter.description}
+                                    onChange={handleInputChange}
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <textarea
+                                    name="personalityTraits"
+                                    placeholder="性格特征"
+                                    value={newCharacter.personalityTraits}
+                                    onChange={handleInputChange}
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <textarea
+                                    name="backgroundStory"
+                                    placeholder="背景故事"
+                                    value={newCharacter.backgroundStory}
+                                    onChange={handleInputChange}
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <select
+                                    name="voiceType"
+                                    value={newCharacter.voiceType}
+                                    onChange={handleInputChange}
+                                >
+                                    <option value="">自动推荐音色</option>
+                                    <option value="qiniu_zh_female_wwxkjx">温婉学科讲师</option>
+                                    <option value="qiniu_zh_female_tmjxxy">甜美教学小源</option>
+                                    <option value="qiniu_zh_female_xyqxxj">校园清新学姐</option>
+                                    <option value="qiniu_zh_male_ljfdxz">邻家辅导学长</option>
+                                    <option value="qiniu_zh_male_whxkxg">温和学科小哥</option>
+                                    <option value="qiniu_zh_male_wncwxz">温暖沉稳学长</option>
+                                    <option value="qiniu_zh_male_ybxknjs">渊博学科男教师</option>
+                                    <option value="qiniu_zh_male_tyygjs">通用阳光讲师</option>
+                                    <option value="qiniu_zh_female_glktss">干练课堂思思</option>
+                                    <option value="qiniu_zh_female_ljfdxx">邻家辅导学姐</option>
+                                    <option value="qiniu_zh_female_kljxdd">开朗教学督导</option>
+                                    <option value="qiniu_zh_female_zxjxnjs">知性教学女教师</option>
+                                </select>
+                                {newCharacter.voiceType && (
+                                    <button type="button" onClick={() => previewVoice(newCharacter.voiceType)}>
+                                        试听音色
+                                    </button>
+                                )}
+                                {!newCharacter.voiceType && (
+                                    <button type="button" onClick={() => previewVoice(recommendVoice())}>
+                                        试听推荐音色
+                                    </button>
+                                )}
+                            </div>
+                            <div className="form-actions">
+                                <button type="submit">添加角色</button>
+                                <button type="button" onClick={() => setShowAddCharacterForm(false)}>取消</button>
+                            </div>
+                        </form>
+                    </section>
+                )}
             </main>
         </div>
     );
