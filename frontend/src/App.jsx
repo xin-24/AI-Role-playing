@@ -167,6 +167,16 @@ function App() {
                     const updatedChatHistory = await historyResponse.json();
                     setChatMessages(updatedChatHistory);
 
+                    // 如果有AI回复消息，使用分段显示功能
+                    if (result.aiMessages && result.aiMessages.length > 0) {
+                        // 移除最后几条AI消息（因为我们要用分段显示替换它们）
+                        const messagesWithoutLastAI = updatedChatHistory.slice(0, -result.aiMessages.length);
+                        setChatMessages(messagesWithoutLastAI);
+
+                        // 分段显示AI回复
+                        await displayAIMessagesInSegments(result.aiMessages, selectedCharacter.id);
+                    }
+
                     // 如果有音频数据，自动播放
                     if (result.audioData) {
                         try {
@@ -399,6 +409,16 @@ function App() {
                         const updatedChatHistory = await historyResponse.json();
                         setChatMessages(updatedChatHistory);
 
+                        // 如果有AI回复消息，使用分段显示功能
+                        if (result.aiMessages && result.aiMessages.length > 0) {
+                            // 移除最后几条AI消息（因为我们要用分段显示替换它们）
+                            const messagesWithoutLastAI = updatedChatHistory.slice(0, -result.aiMessages.length);
+                            setChatMessages(messagesWithoutLastAI);
+
+                            // 分段显示AI回复
+                            await displayAIMessagesInSegments(result.aiMessages, selectedCharacter.id);
+                        }
+
                         // 如果有音频数据，自动播放
                         if (result.audioData) {
                             try {
@@ -447,6 +467,25 @@ function App() {
             setChatMessages([...updatedMessages, errorMessage]);
         } finally {
             setIsSending(false);
+        }
+    };
+
+    // 将AI回复按标点符号分割成多个片段并依次显示
+    const displayAIMessagesInSegments = async (aiMessages, characterId) => {
+        // 如果只有一条消息或者没有消息，则直接显示
+        if (aiMessages.length <= 1) {
+            setChatMessages(prevMessages => [...prevMessages, ...aiMessages]);
+            return;
+        }
+
+        // 依次显示每个片段，并为每条消息添加时间戳
+        for (let i = 0; i < aiMessages.length; i++) {
+            const messageObj = { ...aiMessages[i] };
+            
+            // 添加延迟以模拟逐步回复的效果
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            setChatMessages(prevMessages => [...prevMessages, messageObj]);
         }
     };
 

@@ -26,7 +26,10 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
 import java.util.UUID;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 
 @RestController
@@ -135,12 +138,21 @@ public class VoiceChatController {
                     character.getBackgroundStory(),
                     historyData);
 
-            // 7. 保存AI回复消息
-            ChatMessage aiMessage = new ChatMessage();
-            aiMessage.setCharacterId(characterId);
-            aiMessage.setMessage(aiResponse);
-            aiMessage.setIsUserMessage(false);
-            ChatMessage savedAiMessage = chatMessageRepository.save(aiMessage);
+            // 7. 按照标点符号（。！？）分割AI回复
+            List<String> aiResponseSegments = splitByPunctuation(aiResponse);
+            
+            // 保存分割后的AI回复消息
+            List<ChatMessage> savedAiMessages = new ArrayList<>();
+            for (String segment : aiResponseSegments) {
+                if (!segment.trim().isEmpty()) {
+                    ChatMessage aiMessage = new ChatMessage();
+                    aiMessage.setCharacterId(characterId);
+                    aiMessage.setMessage(segment.trim());
+                    aiMessage.setIsUserMessage(false);
+                    ChatMessage savedAiMessage = chatMessageRepository.save(aiMessage);
+                    savedAiMessages.add(savedAiMessage);
+                }
+            }
 
             // 8. 生成TTS音频数据
             try {
@@ -156,7 +168,7 @@ public class VoiceChatController {
             // 9. 构建成功响应
             response.put("success", true);
             response.put("userMessage", savedUserMessage);
-            response.put("aiMessage", savedAiMessage);
+            response.put("aiMessages", savedAiMessages);
 
         } catch (Exception e) {
             response.put("success", false);
@@ -224,12 +236,21 @@ public class VoiceChatController {
                     character.getBackgroundStory(),
                     historyData);
 
-            // 7. 保存AI回复消息
-            ChatMessage aiMessage = new ChatMessage();
-            aiMessage.setCharacterId(characterId);
-            aiMessage.setMessage(aiResponse);
-            aiMessage.setIsUserMessage(false);
-            ChatMessage savedAiMessage = chatMessageRepository.save(aiMessage);
+            // 7. 按照标点符号（。！？）分割AI回复
+            List<String> aiResponseSegments = splitByPunctuation(aiResponse);
+            
+            // 保存分割后的AI回复消息
+            List<ChatMessage> savedAiMessages = new ArrayList<>();
+            for (String segment : aiResponseSegments) {
+                if (!segment.trim().isEmpty()) {
+                    ChatMessage aiMessage = new ChatMessage();
+                    aiMessage.setCharacterId(characterId);
+                    aiMessage.setMessage(segment.trim());
+                    aiMessage.setIsUserMessage(false);
+                    ChatMessage savedAiMessage = chatMessageRepository.save(aiMessage);
+                    savedAiMessages.add(savedAiMessage);
+                }
+            }
 
             // 8. 生成TTS音频数据
             try {
@@ -245,7 +266,7 @@ public class VoiceChatController {
             // 9. 构建成功响应
             response.put("success", true);
             response.put("userMessage", savedUserMessage);
-            response.put("aiMessage", savedAiMessage);
+            response.put("aiMessages", savedAiMessages);
 
         } catch (Exception e) {
             response.put("success", false);
@@ -267,6 +288,25 @@ public class VoiceChatController {
             // 如果data字段方式失败，抛出异常
             throw new RuntimeException("ASR转录失败: " + e.getMessage());
         }
+    }
+
+    // 按照标点符号（。！？）分割文本
+    private List<String> splitByPunctuation(String text) {
+        List<String> segments = new ArrayList<>();
+        Pattern pattern = Pattern.compile("([^。！？]*[。！？])");
+        Matcher matcher = pattern.matcher(text);
+        
+        while (matcher.find()) {
+            segments.add(matcher.group(1));
+        }
+        
+        // 处理最后可能剩余的部分
+        String[] parts = pattern.split(text);
+        if (parts.length > 0 && !parts[parts.length - 1].trim().isEmpty()) {
+            segments.add(parts[parts.length - 1].trim());
+        }
+        
+        return segments;
     }
 
     /**

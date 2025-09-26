@@ -4,6 +4,9 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -76,16 +79,25 @@ public class ChatMessageController {
                     character.getBackgroundStory(),
                     historyData);
 
-            // 创建并保存AI回复消息
-            ChatMessage aiMessage = new ChatMessage();
-            aiMessage.setCharacterId(chatMessage.getCharacterId());
-            aiMessage.setMessage(aiResponse);
-            aiMessage.setIsUserMessage(false);
-            ChatMessage savedAiMessage = chatMessageRepository.save(aiMessage);
+            // 按照标点符号（。！？）分割AI回复
+            List<String> aiResponseSegments = splitByPunctuation(aiResponse);
+            
+            // 保存分割后的AI回复消息
+            List<ChatMessage> savedAiMessages = new ArrayList<>();
+            for (String segment : aiResponseSegments) {
+                if (!segment.trim().isEmpty()) {
+                    ChatMessage aiMessage = new ChatMessage();
+                    aiMessage.setCharacterId(chatMessage.getCharacterId());
+                    aiMessage.setMessage(segment.trim());
+                    aiMessage.setIsUserMessage(false);
+                    ChatMessage savedAiMessage = chatMessageRepository.save(aiMessage);
+                    savedAiMessages.add(savedAiMessage);
+                }
+            }
 
-            response.put("aiMessage", savedAiMessage);
+            response.put("aiMessages", savedAiMessages);
 
-            // 同时生成TTS语音数据
+            // 同时生成TTS语音数据（使用完整的AI回复）
             try {
                 byte[] audioBytes = qiniuTtsService.synthesize(aiResponse, character.getVoiceType(), "mp3");
                 String base64Audio = Base64.getEncoder().encodeToString(audioBytes);
@@ -105,12 +117,31 @@ public class ChatMessageController {
             errorMessage.setIsUserMessage(false);
             ChatMessage savedErrorMessage = chatMessageRepository.save(errorMessage);
 
-            response.put("aiMessage", savedErrorMessage);
+            response.put("aiMessages", List.of(savedErrorMessage));
             response.put("success", true); // 仍然视为成功，只是AI回复失败
             response.put("aiError", e.getMessage());
         }
 
         return response;
+    }
+
+    // 按照标点符号（。！？）分割文本
+    private List<String> splitByPunctuation(String text) {
+        List<String> segments = new ArrayList<>();
+        Pattern pattern = Pattern.compile("([^。！？]*[。！？])");
+        Matcher matcher = pattern.matcher(text);
+        
+        while (matcher.find()) {
+            segments.add(matcher.group(1));
+        }
+        
+        // 处理最后可能剩余的部分
+        String[] parts = pattern.split(text);
+        if (parts.length > 0 && !parts[parts.length - 1].trim().isEmpty()) {
+            segments.add(parts[parts.length - 1].trim());
+        }
+        
+        return segments;
     }
 
     @GetMapping("/history/{characterId}")
