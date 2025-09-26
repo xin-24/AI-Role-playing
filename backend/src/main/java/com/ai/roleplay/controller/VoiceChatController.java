@@ -268,22 +268,70 @@ public class VoiceChatController {
         }
     }
 
-    // 按照标点符号（。！？）分割文本
+    // 按照标点符号（。！？）分割文本，但忽略引号内的标点符号
     private List<String> splitByPunctuation(String text) {
         List<String> segments = new ArrayList<>();
-        Pattern pattern = Pattern.compile("([^。！？]*[。！？])");
-        Matcher matcher = pattern.matcher(text);
-
-        while (matcher.find()) {
-            segments.add(matcher.group(1));
+        if (text == null || text.isEmpty()) {
+            return segments;
         }
-
-        // 处理最后可能剩余的部分
-        String[] parts = pattern.split(text);
-        if (parts.length > 0 && !parts[parts.length - 1].trim().isEmpty()) {
-            segments.add(parts[parts.length - 1].trim());
+        
+        // 使用正则表达式按标点符号分割，但不拆分引号内的内容
+        // 这个正则表达式会匹配引号外的标点符号
+        List<String> parts = new ArrayList<>();
+        StringBuilder currentPart = new StringBuilder();
+        boolean inQuotes = false;
+        char quoteChar = 0;
+        
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            
+            // 检查引号的开始和结束
+            if ((c == '"' || c == '“' || c == '”' || c == '\'' || c == '‘' || c == '’') && 
+                (i == 0 || text.charAt(i-1) != '\\')) { // 忽略转义的引号
+                if (!inQuotes) {
+                    // 开始引号
+                    inQuotes = true;
+                    quoteChar = c;
+                } else if (c == quoteChar || 
+                          (quoteChar == '“' && c == '”') || 
+                          (quoteChar == '”' && c == '“') ||
+                          (quoteChar == '\'' && c == '\'') ||
+                          (quoteChar == '‘' && c == '’') ||
+                          (quoteChar == '’' && c == '‘')) {
+                    // 结束引号
+                    inQuotes = false;
+                    quoteChar = 0;
+                }
+            }
+            
+            // 如果遇到标点符号且不在引号内，则分割
+            if ((c == '。' || c == '！' || c == '？'  ||c =='"'|| c == '!' || c == '?') && !inQuotes) {
+                currentPart.append(c);
+                parts.add(currentPart.toString());
+                currentPart = new StringBuilder();
+            } else {
+                currentPart.append(c);
+            }
         }
-
+        
+        // 添加最后一部分
+        if (currentPart.length() > 0) {
+            parts.add(currentPart.toString());
+        }
+        
+        // 清理和添加到最终结果
+        for (String part : parts) {
+            String trimmed = part.trim();
+            if (!trimmed.isEmpty()) {
+                segments.add(trimmed);
+            }
+        }
+        
+        // 如果没有匹配到任何标点符号，则将整个文本作为一个片段
+        if (segments.isEmpty()) {
+            segments.add(text.trim());
+        }
+        
         return segments;
     }
 
