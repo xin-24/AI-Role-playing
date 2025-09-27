@@ -737,7 +737,7 @@ function App() {
 
                     {/* 对话区域 - 固定在右侧 */}
                     {selectedCharacter && (
-                        <section className="chat-section">
+                        <section className={`chat-section ${selectedCharacter.name === "哈利·波特" ? "harry-potter-chat" : selectedCharacter.name === "苏格拉底" ? "socrates-chat" : selectedCharacter.name === "英语老师" ? "english-teacher-chat" : ""}`}>
                             <h2>与 {selectedCharacter.name} 对话</h2>
                             <div className="chat-container">
                                 <div className="chat-messages" ref={chatContainerRef}>

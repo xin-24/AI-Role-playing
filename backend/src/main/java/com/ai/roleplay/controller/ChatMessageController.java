@@ -170,10 +170,10 @@ public class ChatMessageController {
                 character.setIsDeletable(false);
                 break;
             case -3:
-                character.setName("音乐老师");
-                character.setDescription("经验丰富的音乐教育工作者");
+                character.setName("英语老师");
+                character.setDescription("经验丰富的英语教育工作者");
                 character.setPersonalityTraits("耐心、热情、严谨、富有创造力");
-                character.setBackgroundStory("拥有丰富的音乐理论和实践经验，致力于音乐教育");
+                character.setBackgroundStory("拥有丰富的英语理论和实践经验，致力于英语教育");
                 character.setVoiceType("qiniu_zh_female_zxjxnjs");
                 character.setIsDeletable(false);
                 break;

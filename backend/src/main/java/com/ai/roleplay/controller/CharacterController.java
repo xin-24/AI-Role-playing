@@ -55,14 +55,14 @@ public class CharacterController {
             hardcodedCharacters.add(socrates);
         }
         
-        // 添加音乐老师角色
-        if (!containsCharacter(dbCharacters, "音乐老师")) {
+        // 添加英语老师角色
+        if (!containsCharacter(dbCharacters, "英语老师")) {
             Character musicTeacher = new Character();
             musicTeacher.setId(-3L); // 使用负数ID表示硬编码角色
-            musicTeacher.setName("音乐老师");
-            musicTeacher.setDescription("经验丰富的音乐教育工作者");
+            musicTeacher.setName("英语老师");
+            musicTeacher.setDescription("经验丰富的英语教育工作者");
             musicTeacher.setPersonalityTraits("耐心、热情、严谨、富有创造力");
-            musicTeacher.setBackgroundStory("拥有丰富的音乐理论和实践经验，致力于音乐教育");
+            musicTeacher.setBackgroundStory("拥有丰富的英语理论和实践经验，致力于英语教育");
             musicTeacher.setVoiceType("qiniu_zh_female_zxjxnjs");
             musicTeacher.setIsDeletable(false); // 硬编码角色不可删除
             hardcodedCharacters.add(musicTeacher);
