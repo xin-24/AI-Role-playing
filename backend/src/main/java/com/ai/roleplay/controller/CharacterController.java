@@ -2,14 +2,12 @@ package com.ai.roleplay.controller;
 
 import com.ai.roleplay.model.Character;
 import com.ai.roleplay.repository.CharacterRepository;
+import com.ai.roleplay.service.CharacterPromptService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/characters")
@@ -18,11 +16,69 @@ public class CharacterController {
 
     @Autowired
     private CharacterRepository characterRepository;
+    
+    @Autowired
+    private CharacterPromptService characterPromptService;
 
-    // 获取所有角色
+    // 获取所有角色（包括数据库中的角色和硬编码的角色）
     @GetMapping
     public List<Character> getAllCharacters() {
-        return characterRepository.findAll();
+        // 获取数据库中的所有角色
+        List<Character> dbCharacters = characterRepository.findAll();
+        
+        // 创建硬编码角色列表
+        List<Character> hardcodedCharacters = new ArrayList<>();
+        
+        // 添加哈利·波特角色
+        if (!containsCharacter(dbCharacters, "哈利·波特")) {
+            Character harryPotter = new Character();
+            harryPotter.setId(-1L); // 使用负数ID表示硬编码角色
+            harryPotter.setName("哈利·波特");
+            harryPotter.setDescription("霍格沃茨魔法学校的学生");
+            harryPotter.setPersonalityTraits("勇敢、正直、有正义感、略带腼腆");
+            harryPotter.setBackgroundStory("生活在霍格沃茨魔法学校，与朋友们一起对抗黑魔法师");
+            harryPotter.setVoiceType("qiniu_zh_male_ljfdxz");
+            harryPotter.setIsDeletable(false); // 硬编码角色不可删除
+            hardcodedCharacters.add(harryPotter);
+        }
+        
+        // 添加苏格拉底角色
+        if (!containsCharacter(dbCharacters, "苏格拉底")) {
+            Character socrates = new Character();
+            socrates.setId(-2L); // 使用负数ID表示硬编码角色
+            socrates.setName("苏格拉底");
+            socrates.setDescription("古希腊哲学家，被誉为西方哲学的奠基人");
+            socrates.setPersonalityTraits("智慧、善于提问、谦逊、追求真理");
+            socrates.setBackgroundStory("生活在古希腊，通过对话和提问来探索真理");
+            socrates.setVoiceType("qiniu_zh_male_ybxknjs");
+            socrates.setIsDeletable(false); // 硬编码角色不可删除
+            hardcodedCharacters.add(socrates);
+        }
+        
+        // 添加音乐老师角色
+        if (!containsCharacter(dbCharacters, "音乐老师")) {
+            Character musicTeacher = new Character();
+            musicTeacher.setId(-3L); // 使用负数ID表示硬编码角色
+            musicTeacher.setName("音乐老师");
+            musicTeacher.setDescription("经验丰富的音乐教育工作者");
+            musicTeacher.setPersonalityTraits("耐心、热情、严谨、富有创造力");
+            musicTeacher.setBackgroundStory("拥有丰富的音乐理论和实践经验，致力于音乐教育");
+            musicTeacher.setVoiceType("qiniu_zh_female_zxjxnjs");
+            musicTeacher.setIsDeletable(false); // 硬编码角色不可删除
+            hardcodedCharacters.add(musicTeacher);
+        }
+        
+        // 合并两个列表
+        List<Character> allCharacters = new ArrayList<>();
+        allCharacters.addAll(hardcodedCharacters);
+        allCharacters.addAll(dbCharacters);
+        
+        return allCharacters;
+    }
+    
+    // 检查角色列表中是否已包含指定名称的角色
+    private boolean containsCharacter(List<Character> characters, String name) {
+        return characters.stream().anyMatch(c -> name.equals(c.getName()));
     }
 
     // 搜索角色
@@ -50,6 +106,11 @@ public class CharacterController {
     // 删除角色
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteCharacter(@PathVariable("id") Long id) {
+        // 硬编码角色（ID为负数）不能删除
+        if (id < 0) {
+            return ResponseEntity.badRequest().body("该角色为系统默认角色，不可删除");
+        }
+        
         Optional<Character> characterOptional = characterRepository.findById(id);
         if (characterOptional.isPresent()) {
             Character character = characterOptional.get();

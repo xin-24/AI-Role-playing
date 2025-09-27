@@ -9,7 +9,7 @@ import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.io.entity.EntityUtils;
-import org.apache.hc.core5.http.io.entity.StringEntity;
+import org.apache.hc.core5.http.io.entity.StringEntity;  // 添加这行导入
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +26,9 @@ public class QiniuAIService {
     @Autowired
     private QiniuAIConfig qiniuAIConfig;
 
+    @Autowired
+    private CharacterPromptService characterPromptService;
+
     /**
      * 根据用户输入的角色设定和对话历史生成AI回复
      *
@@ -40,14 +43,21 @@ public class QiniuAIService {
             String personalityTraits, String backgroundStory,
             List<Map<String, Object>> chatHistory) {
 
-        // 构建更自然的角色设定提示
-        StringBuilder systemPrompt = new StringBuilder();
-        systemPrompt.append("你是一个角色扮演AI，严格根据以下设定进行回复：\n");
-        systemPrompt.append("角色名称：").append(characterName).append("\n");
-        systemPrompt.append("角色描述：").append(characterDescription).append("\n");
-        systemPrompt.append("性格特征：").append(personalityTraits).append("\n");
-        systemPrompt.append("背景故事：").append(backgroundStory).append("\n");
-        systemPrompt.append("请始终保持这个角色的身份，用符合角色性格和背景的方式进行回复，可以使用对应的颜文字或者使用emoji表情");
+        // 使用硬编码的角色提示词
+        String systemPrompt = characterPromptService.getCharacterPrompt(characterName);
+        
+        // 如果没有硬编码的提示词，则使用原有的动态构建方式
+        if (systemPrompt.equals(characterPromptService.getDefaultPrompt())) {
+            // 构建更自然的角色设定提示
+            StringBuilder dynamicPrompt = new StringBuilder();
+            dynamicPrompt.append("你是一个角色扮演AI，严格根据以下设定进行回复：\n");
+            dynamicPrompt.append("角色名称：").append(characterName).append("\n");
+            dynamicPrompt.append("角色描述：").append(characterDescription).append("\n");
+            dynamicPrompt.append("性格特征：").append(personalityTraits).append("\n");
+            dynamicPrompt.append("背景故事：").append(backgroundStory).append("\n");
+            dynamicPrompt.append("请始终保持这个角色的身份，用符合角色性格和背景的方式进行回复，可以使用对应的颜文字或者使用emoji表情");
+            systemPrompt = dynamicPrompt.toString();
+        }
 
         // 构建对话历史消息
         StringBuilder conversationHistory = new StringBuilder();
@@ -62,12 +72,12 @@ public class QiniuAIService {
         }
 
         // 记录请求信息用于调试
-        logger.info("调用七牛AI API，角色名称: {}, 角色描述: {}, 性格特征: {}", characterName, characterDescription, personalityTraits);
-        logger.debug("系统提示词: {}", systemPrompt.toString());
+        logger.info("调用七牛AI API，角色名称: {}", characterName);
+        logger.debug("系统提示词: {}", systemPrompt);
         logger.debug("用户消息: {}", conversationHistory.toString());
 
         // 调用七牛AI API
-        return callQiniuAI(systemPrompt.toString(), conversationHistory.toString());
+        return callQiniuAI(systemPrompt, conversationHistory.toString());
     }
 
     /**
@@ -165,5 +175,10 @@ public class QiniuAIService {
             throw new RuntimeException("调用七牛AI API时发生IO异常: " + e.getMessage() +
                     "。请检查网络连接或防火墙设置。", e);
         }
+    }
+    
+    // 添加getter方法，便于测试
+    public CharacterPromptService getCharacterPromptService() {
+        return characterPromptService;
     }
 }

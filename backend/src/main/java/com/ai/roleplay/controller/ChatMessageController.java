@@ -5,6 +5,7 @@ import com.ai.roleplay.model.Character;
 import com.ai.roleplay.repository.ChatMessageRepository;
 import com.ai.roleplay.repository.CharacterRepository;
 import com.ai.roleplay.service.QiniuAIService;
+import com.ai.roleplay.service.CharacterPromptService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
@@ -14,6 +15,7 @@ import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/chat")
@@ -28,6 +30,9 @@ public class ChatMessageController {
 
     @Autowired
     private QiniuAIService qiniuAIService;
+    
+    @Autowired
+    private CharacterPromptService characterPromptService;
 
     @PostMapping("/send")
     public Map<String, Object> sendMessage(@RequestBody ChatMessage chatMessage) {
@@ -38,7 +43,15 @@ public class ChatMessageController {
         response.put("userMessage", savedUserMessage);
 
         // 获取角色信息
-        Character character = characterRepository.findById(chatMessage.getCharacterId()).orElse(null);
+        Character character = null;
+        if (chatMessage.getCharacterId() < 0) {
+            // 处理硬编码角色
+            character = getHardcodedCharacter(chatMessage.getCharacterId());
+        } else {
+            // 处理数据库中的角色
+            character = characterRepository.findById(chatMessage.getCharacterId()).orElse(null);
+        }
+        
         if (character == null) {
             response.put("success", false);
             response.put("error", "角色不存在");
@@ -58,32 +71,64 @@ public class ChatMessageController {
         }).collect(Collectors.toList());
 
         try {
-            // 生成AI回复
-            String aiResponse = qiniuAIService.generateAIResponse(
-                    character.getName(),
-                    character.getDescription(),
-                    character.getPersonalityTraits(),
-                    character.getBackgroundStory(),
-                    historyData);
-
-            // 按标点符号分割AI回复
-            List<String> segments = splitByPunctuation(aiResponse);
-            
-            // 创建并保存分割后的AI回复消息
-            List<ChatMessage> aiMessages = new ArrayList<>();
-            for (String segment : segments) {
-                if (!segment.trim().isEmpty()) {
-                    ChatMessage aiMessage = new ChatMessage();
-                    aiMessage.setCharacterId(chatMessage.getCharacterId());
-                    aiMessage.setMessage(segment.trim());
-                    aiMessage.setIsUserMessage(false);
-                    ChatMessage savedAiMessage = chatMessageRepository.save(aiMessage);
-                    aiMessages.add(savedAiMessage);
+            // 检查是否为硬编码角色
+            String characterName = character.getName();
+            if (characterPromptService.hasCharacterPrompt(characterName)) {
+                // 对于硬编码角色，使用CharacterPromptService中的提示词
+                // 生成AI回复时，我们只需要传递角色名称，其他参数可以为空
+                String aiResponse = qiniuAIService.generateAIResponse(
+                        character.getName(),
+                        "", // 描述为空
+                        "", // 性格特征为空
+                        "", // 背景故事为空
+                        historyData);
+                        
+                // 按标点符号分割AI回复
+                List<String> segments = splitByPunctuation(aiResponse);
+                
+                // 创建并保存分割后的AI回复消息
+                List<ChatMessage> aiMessages = new ArrayList<>();
+                for (String segment : segments) {
+                    if (!segment.trim().isEmpty()) {
+                        ChatMessage aiMessage = new ChatMessage();
+                        aiMessage.setCharacterId(chatMessage.getCharacterId());
+                        aiMessage.setMessage(segment.trim());
+                        aiMessage.setIsUserMessage(false);
+                        ChatMessage savedAiMessage = chatMessageRepository.save(aiMessage);
+                        aiMessages.add(savedAiMessage);
+                    }
                 }
+                
+                response.put("success", true);
+                response.put("aiMessages", aiMessages);
+            } else {
+                // 对于数据库中的角色，使用原有的方式
+                String aiResponse = qiniuAIService.generateAIResponse(
+                        character.getName(),
+                        character.getDescription(),
+                        character.getPersonalityTraits(),
+                        character.getBackgroundStory(),
+                        historyData);
+
+                // 按标点符号分割AI回复
+                List<String> segments = splitByPunctuation(aiResponse);
+                
+                // 创建并保存分割后的AI回复消息
+                List<ChatMessage> aiMessages = new ArrayList<>();
+                for (String segment : segments) {
+                    if (!segment.trim().isEmpty()) {
+                        ChatMessage aiMessage = new ChatMessage();
+                        aiMessage.setCharacterId(chatMessage.getCharacterId());
+                        aiMessage.setMessage(segment.trim());
+                        aiMessage.setIsUserMessage(false);
+                        ChatMessage savedAiMessage = chatMessageRepository.save(aiMessage);
+                        aiMessages.add(savedAiMessage);
+                    }
+                }
+                
+                response.put("success", true);
+                response.put("aiMessages", aiMessages);
             }
-            
-            response.put("success", true);
-            response.put("aiMessages", aiMessages);
         } catch (Exception e) {
             // 如果AI回复生成失败，创建一个错误消息
             ChatMessage errorMessage = new ChatMessage();
@@ -100,6 +145,43 @@ public class ChatMessageController {
         }
 
         return response;
+    }
+    
+    // 获取硬编码角色
+    private Character getHardcodedCharacter(Long characterId) {
+        Character character = new Character();
+        character.setId(characterId);
+        
+        switch (characterId.intValue()) {
+            case -1:
+                character.setName("哈利·波特");
+                character.setDescription("霍格沃茨魔法学校的学生");
+                character.setPersonalityTraits("勇敢、正直、有正义感、略带腼腆");
+                character.setBackgroundStory("生活在霍格沃茨魔法学校，与朋友们一起对抗黑魔法师");
+                character.setVoiceType("qiniu_zh_male_ljfdxz");
+                character.setIsDeletable(false);
+                break;
+            case -2:
+                character.setName("苏格拉底");
+                character.setDescription("古希腊哲学家，被誉为西方哲学的奠基人");
+                character.setPersonalityTraits("智慧、善于提问、谦逊、追求真理");
+                character.setBackgroundStory("生活在古希腊，通过对话和提问来探索真理");
+                character.setVoiceType("qiniu_zh_male_ybxknjs");
+                character.setIsDeletable(false);
+                break;
+            case -3:
+                character.setName("音乐老师");
+                character.setDescription("经验丰富的音乐教育工作者");
+                character.setPersonalityTraits("耐心、热情、严谨、富有创造力");
+                character.setBackgroundStory("拥有丰富的音乐理论和实践经验，致力于音乐教育");
+                character.setVoiceType("qiniu_zh_female_zxjxnjs");
+                character.setIsDeletable(false);
+                break;
+            default:
+                return null;
+        }
+        
+        return character;
     }
 
     // 按标点符号分割文本，但忽略引号内的标点符号

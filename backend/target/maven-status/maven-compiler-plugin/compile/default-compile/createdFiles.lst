@@ -1,6 +1,7 @@
 com/ai/roleplay/repository/CharacterRepository.class
 com/ai/roleplay/config/QiniuOSSConfig.class
 com/ai/roleplay/controller/TempFileController.class
+com/ai/roleplay/service/CharacterPromptService.class
 com/ai/roleplay/service/QiniuAIService.class
 com/ai/roleplay/controller/AsrController.class
 com/ai/roleplay/service/QiniuTtsService.class

@@ -3,6 +3,7 @@
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/repository/CharacterRepository.java
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/service/AsrTestService.java
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/repository/ChatMessageRepository.java
+/Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/service/CharacterPromptService.java
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/config/WebConfig.java
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/config/QiniuAIConfig.java
 /Users/xin/Desktop/java/AI-Role-playing/backend/src/main/java/com/ai/roleplay/controller/TtsController.java

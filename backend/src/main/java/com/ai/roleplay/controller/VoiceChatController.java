@@ -6,6 +6,7 @@ import com.ai.roleplay.repository.CharacterRepository;
 import com.ai.roleplay.service.QiniuAsrService;
 import com.ai.roleplay.service.QiniuAIService;
 import com.ai.roleplay.service.QiniuTtsService;
+import com.ai.roleplay.service.CharacterPromptService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -51,6 +52,9 @@ public class VoiceChatController {
 
     @Autowired
     private CharacterRepository characterRepository;
+    
+    @Autowired
+    private CharacterPromptService characterPromptService;
 
     @Value("${server.port:8082}")
     private String serverPort;
@@ -111,7 +115,15 @@ public class VoiceChatController {
             ChatMessage savedUserMessage = chatMessageRepository.save(userMessage);
 
             // 3. 获取角色信息
-            com.ai.roleplay.model.Character character = characterRepository.findById(characterId).orElse(null);
+            com.ai.roleplay.model.Character character = null;
+            if (characterId < 0) {
+                // 处理硬编码角色
+                character = getHardcodedCharacter(characterId);
+            } else {
+                // 处理数据库中的角色
+                character = characterRepository.findById(characterId).orElse(null);
+            }
+            
             if (character == null) {
                 response.put("success", false);
                 response.put("error", "未找到指定角色");
@@ -131,12 +143,25 @@ public class VoiceChatController {
             }).collect(Collectors.toList());
 
             // 6. 生成AI回复
-            String aiResponse = qiniuAIService.generateAIResponse(
-                    character.getName(),
-                    character.getDescription(),
-                    character.getPersonalityTraits(),
-                    character.getBackgroundStory(),
-                    historyData);
+            String aiResponse = null;
+            String characterName = character.getName();
+            if (characterPromptService.hasCharacterPrompt(characterName)) {
+                // 对于硬编码角色，使用CharacterPromptService中的提示词
+                aiResponse = qiniuAIService.generateAIResponse(
+                        character.getName(),
+                        "", // 描述为空
+                        "", // 性格特征为空
+                        "", // 背景故事为空
+                        historyData);
+            } else {
+                // 对于数据库中的角色，使用原有的方式
+                aiResponse = qiniuAIService.generateAIResponse(
+                        character.getName(),
+                        character.getDescription(),
+                        character.getPersonalityTraits(),
+                        character.getBackgroundStory(),
+                        historyData);
+            }
 
             // 7. 按照标点符号（。！？）分割AI回复
             List<String> aiResponseSegments = splitByPunctuation(aiResponse);
@@ -198,7 +223,15 @@ public class VoiceChatController {
             ChatMessage savedUserMessage = chatMessageRepository.save(userMessage);
 
             // 3. 获取角色信息
-            com.ai.roleplay.model.Character character = characterRepository.findById(characterId).orElse(null);
+            com.ai.roleplay.model.Character character = null;
+            if (characterId < 0) {
+                // 处理硬编码角色
+                character = getHardcodedCharacter(characterId);
+            } else {
+                // 处理数据库中的角色
+                character = characterRepository.findById(characterId).orElse(null);
+            }
+            
             if (character == null) {
                 response.put("success", false);
                 response.put("error", "未找到指定角色");
@@ -218,12 +251,25 @@ public class VoiceChatController {
             }).collect(Collectors.toList());
 
             // 6. 生成AI回复
-            String aiResponse = qiniuAIService.generateAIResponse(
-                    character.getName(),
-                    character.getDescription(),
-                    character.getPersonalityTraits(),
-                    character.getBackgroundStory(),
-                    historyData);
+            String aiResponse = null;
+            String characterName = character.getName();
+            if (characterPromptService.hasCharacterPrompt(characterName)) {
+                // 对于硬编码角色，使用CharacterPromptService中的提示词
+                aiResponse = qiniuAIService.generateAIResponse(
+                        character.getName(),
+                        "", // 描述为空
+                        "", // 性格特征为空
+                        "", // 背景故事为空
+                        historyData);
+            } else {
+                // 对于数据库中的角色，使用原有的方式
+                aiResponse = qiniuAIService.generateAIResponse(
+                        character.getName(),
+                        character.getDescription(),
+                        character.getPersonalityTraits(),
+                        character.getBackgroundStory(),
+                        historyData);
+            }
 
             // 7. 按照标点符号（。！？）分割AI回复
             List<String> aiResponseSegments = splitByPunctuation(aiResponse);
@@ -252,6 +298,43 @@ public class VoiceChatController {
         }
 
         return response;
+    }
+    
+    // 获取硬编码角色
+    private com.ai.roleplay.model.Character getHardcodedCharacter(Long characterId) {
+        com.ai.roleplay.model.Character character = new com.ai.roleplay.model.Character();
+        character.setId(characterId);
+        
+        switch (characterId.intValue()) {
+            case -1:
+                character.setName("哈利·波特");
+                character.setDescription("霍格沃茨魔法学校的学生");
+                character.setPersonalityTraits("勇敢、正直、有正义感、略带腼腆");
+                character.setBackgroundStory("生活在霍格沃茨魔法学校，与朋友们一起对抗黑魔法师");
+                character.setVoiceType("qiniu_zh_male_ljfdxz");
+                character.setIsDeletable(false);
+                break;
+            case -2:
+                character.setName("苏格拉底");
+                character.setDescription("古希腊哲学家，被誉为西方哲学的奠基人");
+                character.setPersonalityTraits("智慧、善于提问、谦逊、追求真理");
+                character.setBackgroundStory("生活在古希腊，通过对话和提问来探索真理");
+                character.setVoiceType("qiniu_zh_male_ybxknjs");
+                character.setIsDeletable(false);
+                break;
+            case -3:
+                character.setName("音乐老师");
+                character.setDescription("经验丰富的音乐教育工作者");
+                character.setPersonalityTraits("耐心、热情、严谨、富有创造力");
+                character.setBackgroundStory("拥有丰富的音乐理论和实践经验，致力于音乐教育");
+                character.setVoiceType("qiniu_zh_female_zxjxnjs");
+                character.setIsDeletable(false);
+                break;
+            default:
+                return null;
+        }
+        
+        return character;
     }
 
     /**
