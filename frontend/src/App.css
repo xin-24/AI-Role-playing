@@ -119,6 +119,22 @@ main {
     background-color: rgba(255, 255, 255, 0.7); /* 半透明背景，确保输入框可见 */
 }
 
+/* 默认背景 */
+.chat-section.default-background .chat-messages {
+    background-image: url('/defultImage.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    /* 添加磨砂玻璃效果 */
+    background-color: rgba(248, 249, 250, 0.7);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+}
+
+.chat-section.default-background .chat-input {
+    background-color: rgba(255, 255, 255, 0.7); /* 半透明背景，确保输入框可见 */
+}
+
 .characters-section h2,
 .add-character-section h2,
 .chat-section h2 {
@@ -202,6 +218,35 @@ main {
     overflow-y: auto;
     padding: 20px;
     background-color: #f8f9fa;
+}
+
+/* 全屏模式下的聊天消息区域 */
+.chat-section.fullscreen .chat-messages {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: calc(100vh - 44px); /* 减去chat-input的高度 */
+    z-index: 1000;
+    padding: 20px;
+    box-sizing: border-box;
+    background-color: #f8f9fa;
+}
+
+/* 全屏模式下的消息内容 */
+.chat-section.fullscreen .message-content {
+    max-width: 90%;
+}
+
+/* 全屏模式下的输入区域 */
+.chat-section.fullscreen .chat-input {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100vw;
+    height: 44px;
+    z-index: 1001;
+    box-sizing: border-box;
 }
 
 .message {
@@ -317,6 +362,9 @@ main {
     padding: 15px;
     background-color: white;
     border-top: 1px solid #ddd;
+    height: 44px;
+    min-height: 44px;
+    align-items: center;
 }
 
 .chat-input textarea {
@@ -325,8 +373,8 @@ main {
     border: 1px solid #ddd;
     border-radius: 4px;
     resize: none;
-    min-height: 60px;
-    max-height: 120px;
+    min-height: 44px;
+    max-height: 44px;
 }
 
 .chat-input button {
@@ -338,10 +386,173 @@ main {
     border-radius: 4px;
     cursor: pointer;
     align-self: flex-end;
+    height: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .chat-input button:hover {
     background-color: #0056b3;
+}
+
+/* 全屏切换按钮样式 */
+.fullscreen-toggle-button {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    padding: 8px 12px;
+    background-color: rgba(0, 123, 255, 0.8);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    z-index: 1002; /* 提高z-index确保在全屏模式下可见 */
+}
+
+.fullscreen-toggle-button:hover {
+    background-color: rgba(0, 123, 255, 1);
+}
+
+/* 全屏模式下的全屏切换按钮 */
+.chat-section.fullscreen .fullscreen-toggle-button {
+    top: 10px;
+    right: 10px;
+    z-index: 1003; /* 确保在全屏模式下按钮始终可见 */
+}
+
+/* 全屏模式下的聊天区域 */
+.chat-section.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1000;
+    background-color: #f8f9fa;
+}
+
+.chat-section.fullscreen .chat-container {
+    height: 100vh;
+    border: none;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-section.fullscreen h2 {
+    display: none;
+}
+
+.chat-section.fullscreen .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    box-sizing: border-box;
+    background-color: #f8f9fa;
+    height: calc(100vh - 44px); /* 减去chat-input的高度 */
+}
+
+/* 全屏模式下的输入区域 */
+.chat-section.fullscreen .chat-input {
+    height: 44px;
+    min-height: 44px;
+    padding: 0 15px;
+    box-sizing: border-box;
+    background-color: white;
+    border-top: 1px solid #ddd;
+    display: flex;
+    align-items: center;
+}
+
+.chat-section.fullscreen .chat-input textarea {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    resize: none;
+    min-height: 44px;
+    max-height: 44px;
+    margin-right: 10px;
+}
+
+.chat-section.fullscreen .chat-input button {
+    margin-left: 10px;
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    align-self: flex-end;
+    height: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chat-section.fullscreen .chat-input button:hover {
+    background-color: #0056b3;
+}
+
+.chat-section.fullscreen .mic-button {
+    margin-left: 10px;
+    padding: 10px 14px;
+    background-color: #6c757d;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    align-self: flex-end;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
+}
+
+.chat-section.fullscreen .mic-button:hover {
+    background-color: #5a6268;
+}
+
+.chat-section.fullscreen .mic-button.recording {
+    background-color: #dc3545;
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.2);
+}
+
+.chat-section.fullscreen .recording-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #dc3545;
+    font-size: 14px;
+    margin-right: 10px;
+}
+
+.chat-section.fullscreen .transcribing-indicator {
+    color: #6c757d;
+    font-size: 14px;
+    margin-right: 10px;
+}
+
+.chat-section.fullscreen .stop-voice-button {
+    margin-left: 10px;
+    padding: 10px 20px;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    align-self: flex-end;
+    height: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .add-character-section form {
@@ -367,6 +578,8 @@ main {
     display: flex;
     align-items: center;
     justify-content: center;
+    min-height: 44px;
+    min-width: 44px;
 }
 
 .mic-button:hover {
@@ -495,5 +708,41 @@ main {
 
     .characters-grid {
         max-height: 400px;
+    }
+    
+    /* 移动端全屏模式调整 */
+    .chat-section.fullscreen .message-content {
+        max-width: 95%;
+    }
+    
+    .fullscreen-toggle-button {
+        top: 5px;
+        right: 5px;
+        padding: 6px 10px;
+        font-size: 14px;
+    }
+    
+    /* 移动端全屏模式下的输入区域 */
+    .chat-section.fullscreen .chat-input {
+        padding: 0 10px;
+    }
+    
+    .chat-section.fullscreen .chat-input textarea {
+        padding: 8px;
+        margin-right: 5px;
+    }
+    
+    .chat-section.fullscreen .chat-input button {
+        padding: 8px 15px;
+        margin-left: 5px;
+    }
+    
+    .chat-section.fullscreen .mic-button {
+        padding: 8px 12px;
+        margin-left: 5px;
+        width: 40px;
+        height: 40px;
+        min-height: 40px;
+        min-width: 40px;
     }
 }

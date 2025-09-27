@@ -11,13 +11,14 @@ function App() {
         backgroundStory: '',
         voiceType: ''
     });
-    const [showAddCharacterForm, setShowAddCharacterForm] = useState(false); // 添加这行来定义showAddCharacterForm状态
+    const [showAddCharacterForm, setShowAddCharacterForm] = useState(false);
     const [selectedCharacter, setSelectedCharacter] = useState(null);
     const [chatMessages, setChatMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [currentPlayingMessage, setCurrentPlayingMessage] = useState(null);
+    const [isFullscreen, setIsFullscreen] = useState(false); // 添加全屏状态
     const chatContainerRef = useRef(null);
     const charactersContainerRef = useRef(null);
     // Web Speech API相关状态
@@ -713,9 +714,6 @@ function App() {
                                     <p><strong>描述:</strong> {character.description}</p>
                                     <p><strong>性格特征:</strong> {character.personalityTraits}</p>
                                     <p><strong>背景故事:</strong> {character.backgroundStory}</p>
-                                    {character.voiceType && (
-                                        <p><strong>角色音色:</strong> {character.voiceType}</p>
-                                    )}
                                     {/* 只有当角色可删除时才显示删除按钮 */}
                                     {character.isDeletable !== false && (
                                         <button
@@ -737,7 +735,7 @@ function App() {
 
                     {/* 对话区域 - 固定在右侧 */}
                     {selectedCharacter && (
-                        <section className={`chat-section ${selectedCharacter.name === "哈利·波特" ? "harry-potter-chat" : selectedCharacter.name === "苏格拉底" ? "socrates-chat" : selectedCharacter.name === "英语老师" ? "english-teacher-chat" : ""}`}>
+                        <section className={`chat-section ${selectedCharacter.name === "哈利·波特" ? "harry-potter-chat" : selectedCharacter.name === "苏格拉底" ? "socrates-chat" : selectedCharacter.name === "英语老师" ? "english-teacher-chat" : "default-background"} ${isFullscreen ? "fullscreen" : ""}`}>
                             <h2>与 {selectedCharacter.name} 对话</h2>
                             <div className="chat-container">
                                 <div className="chat-messages" ref={chatContainerRef}>
@@ -767,6 +765,7 @@ function App() {
                                         </div>
                                     ))}
                                 </div>
+                                {/* 在全屏模式下也保留输入区域 */}
                                 <div className="chat-input">
                                     {isRecording && (
                                         <div className="recording-indicator" title="正在语音输入">
@@ -802,6 +801,13 @@ function App() {
                                         </button>
                                     )}
                                 </div>
+                                {/* 添加全屏切换按钮 */}
+                                <button 
+                                    className="fullscreen-toggle-button"
+                                    onClick={() => setIsFullscreen(!isFullscreen)}
+                                >
+                                    {isFullscreen ? "退出全屏" : "全屏显示"}
+                                </button>
                             </div>
                         </section>
                     )}
