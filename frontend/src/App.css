@@ -125,6 +125,21 @@ main {
     color: #333;
 }
 
+.delete-character-button {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    cursor: pointer;
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+.delete-character-button:hover {
+    background-color: #c82333;
+}
+
 .chat-container {
     display: flex;
     flex-direction: column;
@@ -188,9 +203,11 @@ main {
     0% {
         border-color: #007bff;
     }
+
     50% {
         border-color: #17a2b8;
     }
+
     100% {
         border-color: #007bff;
     }
@@ -212,10 +229,12 @@ main {
         transform: scale(0.8);
         opacity: 0.7;
     }
+
     50% {
         transform: scale(1.2);
         opacity: 1;
     }
+
     100% {
         transform: scale(0.8);
         opacity: 0.7;

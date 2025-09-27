@@ -1,7 +1,15 @@
 package com.ai.roleplay.model;
 
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "characters")
@@ -25,6 +33,9 @@ public class Character {
     @Column(name = "voice_type")
     private String voiceType;
 
+    @Column(name = "is_deletable")
+    private Boolean isDeletable = true; // 默认可删除
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -42,6 +53,7 @@ public class Character {
         this.personalityTraits = personalityTraits;
         this.backgroundStory = backgroundStory;
         this.voiceType = voiceType;
+        this.isDeletable = true; // 默认可删除
     }
 
     // Getters and Setters
@@ -91,6 +103,14 @@ public class Character {
 
     public void setVoiceType(String voiceType) {
         this.voiceType = voiceType;
+    }
+
+    public Boolean getIsDeletable() {
+        return isDeletable;
+    }
+
+    public void setIsDeletable(Boolean isDeletable) {
+        this.isDeletable = isDeletable;
     }
 
     public LocalDateTime getCreatedAt() {

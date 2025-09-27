@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/characters")
@@ -39,7 +40,28 @@ public class CharacterController {
         if (character.getVoiceType() == null || character.getVoiceType().isEmpty()) {
             character.setVoiceType("qiniu_zh_female_wwxkjx"); // 默认音色
         }
+        // 默认设置为可删除
+        if (character.getIsDeletable() == null) {
+            character.setIsDeletable(true);
+        }
         return characterRepository.save(character);
+    }
+
+    // 删除角色
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteCharacter(@PathVariable("id") Long id) {
+        Optional<Character> characterOptional = characterRepository.findById(id);
+        if (characterOptional.isPresent()) {
+            Character character = characterOptional.get();
+            // 检查角色是否可以删除
+            if (Boolean.FALSE.equals(character.getIsDeletable())) {
+                return ResponseEntity.badRequest().body("该角色为系统默认角色，不可删除");
+            }
+            characterRepository.deleteById(id);
+            return ResponseEntity.ok().body("角色删除成功");
+        } else {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     // 获取音色列表

@@ -19,4 +19,7 @@ public interface CharacterRepository extends JpaRepository<Character, Long> {
     // 添加新的查询方法，支持按名称、描述、性格特征或背景故事搜索
     List<Character> findByNameContainingOrDescriptionContainingOrPersonalityTraitsContainingOrBackgroundStoryContainingAllIgnoreCase(
             String name, String description, String personalityTraits, String backgroundStory);
+
+    // 查询不可删除的角色数量
+    long countByIsDeletableFalse();
 }

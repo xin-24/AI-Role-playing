@@ -480,14 +480,14 @@ function App() {
 
         // 获取角色信息
         const character = characters.find(c => c.id === characterId);
-        
+
         // 遍历所有消息片段，按顺序显示和播放
         for (let i = 0; i < aiMessages.length; i++) {
             const messageObj = { ...aiMessages[i] };
-            
+
             // 显示当前消息（立即显示）
             setChatMessages(prevMessages => [...prevMessages, messageObj]);
-            
+
             // 如果有角色信息且消息不为空，则播放TTS
             if (character && messageObj.message) {
                 try {
@@ -507,26 +507,26 @@ function App() {
         return new Promise((resolve, reject) => {
             // 设置当前播放的消息
             setCurrentPlayingMessage(message);
-            
+
             // 优先使用后端TTS（带超时与响应校验）
             const playAudio = (audioData) => {
                 try {
                     const blob = new Blob([audioData], { type: 'audio/mpeg' });
                     const url = URL.createObjectURL(blob);
                     const audio = new Audio(url);
-                    
+
                     audio.onended = () => {
                         URL.revokeObjectURL(url);
                         setCurrentPlayingMessage(null); // 清除当前播放的消息
                         resolve();
                     };
-                    
+
                     audio.onerror = (e) => {
                         URL.revokeObjectURL(url);
                         setCurrentPlayingMessage(null); // 清除当前播放的消息
                         reject(new Error('音频播放失败'));
                     };
-                    
+
                     audio.play().catch(reject);
                 } catch (e) {
                     setCurrentPlayingMessage(null); // 清除当前播放的消息
@@ -562,7 +562,7 @@ function App() {
             }).catch(e => {
                 console.warn('后端TTS失败，尝试使用浏览器TTS:', e);
                 setCurrentPlayingMessage(null); // 清除当前播放的消息
-                
+
                 // 回退到浏览器SpeechSynthesis
                 if ('speechSynthesis' in window) {
                     const utterance = new SpeechSynthesisUtterance(message);
@@ -576,7 +576,7 @@ function App() {
                             || availableVoices[0];
                         utterance.voice = selectedVoice;
                     }
-                    
+
                     utterance.onend = () => {
                         setCurrentPlayingMessage(null); // 清除当前播放的消息
                         resolve();
@@ -585,7 +585,7 @@ function App() {
                         setCurrentPlayingMessage(null); // 清除当前播放的消息
                         resolve(); // 即使出错也继续
                     };
-                    
+
                     window.speechSynthesis.speak(utterance);
                 } else {
                     setCurrentPlayingMessage(null); // 清除当前播放的消息
@@ -647,6 +647,35 @@ function App() {
         return "qiniu_zh_female_wwxkjx";
     };
 
+    // 删除角色
+    const deleteCharacter = async (characterId) => {
+        try {
+            const response = await fetch(`http://localhost:8082/api/characters/${characterId}`, {
+                method: 'DELETE',
+            });
+
+            if (response.ok) {
+                // 删除成功，从角色列表中移除该角色
+                setCharacters(characters.filter(character => character.id !== characterId));
+                // 如果当前选中的角色被删除，清空选中状态
+                if (selectedCharacter && selectedCharacter.id === characterId) {
+                    setSelectedCharacter(null);
+                    setChatMessages([]);
+                }
+                alert('角色删除成功');
+            } else if (response.status === 400) {
+                // 角色不可删除
+                const errorMsg = await response.text();
+                alert(errorMsg);
+            } else {
+                alert('删除角色失败');
+            }
+        } catch (error) {
+            console.error('删除角色失败:', error);
+            alert('删除角色失败，请检查网络连接');
+        }
+    };
+
     return (
         <div className="App">
             <header className="App-header">
@@ -686,6 +715,20 @@ function App() {
                                     <p><strong>背景故事:</strong> {character.backgroundStory}</p>
                                     {character.voiceType && (
                                         <p><strong>角色音色:</strong> {character.voiceType}</p>
+                                    )}
+                                    {/* 只有当角色可删除时才显示删除按钮 */}
+                                    {character.isDeletable !== false && (
+                                        <button
+                                            className="delete-character-button"
+                                            onClick={(e) => {
+                                                e.stopPropagation(); // 阻止事件冒泡，避免触发选择角色
+                                                if (window.confirm(`确定要删除角色 "${character.name}" 吗？`)) {
+                                                    deleteCharacter(character.id);
+                                                }
+                                            }}
+                                        >
+                                            删除角色
+                                        </button>
                                     )}
                                 </div>
                             ))}
