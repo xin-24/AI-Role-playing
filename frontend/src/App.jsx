@@ -698,7 +698,7 @@ function App() {
                         <button type="button" onClick={fetchCharacters}>显示全部</button>
                     </form>
                 </section>
-
+ 
                 <div className="main-content">
                     {/* 角色列表 - 固定在左侧 */}
                     <section className="characters-section" ref={charactersContainerRef}>

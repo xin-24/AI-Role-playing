@@ -375,6 +375,8 @@ main {
     resize: none;
     min-height: 44px;
     max-height: 44px;
+    line-height: 1.2; /* 控制行高防止文字突出 */
+    box-sizing: border-box; /* 确保padding包含在height内 */
 }
 
 .chat-input button {
@@ -475,6 +477,8 @@ main {
     min-height: 44px;
     max-height: 44px;
     margin-right: 10px;
+    line-height: 1.2; /* 控制行高防止文字突出 */
+    box-sizing: border-box; /* 确保padding包含在height内 */
 }
 
 .chat-section.fullscreen .chat-input button {
@@ -730,6 +734,8 @@ main {
     .chat-section.fullscreen .chat-input textarea {
         padding: 8px;
         margin-right: 5px;
+        line-height: 1.2; /* 控制行高防止文字突出 */
+        box-sizing: border-box; /* 确保padding包含在height内 */
     }
     
     .chat-section.fullscreen .chat-input button {
