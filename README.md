@@ -19,22 +19,22 @@ AI角色扮演平台是一个前后端分离的Web应用程序，允许用户与
 
 ```mermaid
 graph TB
-    A[用户浏览器] --> B(前端应用<br/>React + Vite<br/>端口:3000/3001)
+    A[用户浏览器] --> B(前端应用<br/>React + Vite<br/>端口:3000)
     B --> C(后端服务<br/>Spring Boot<br/>端口:8082)
-    C --> D[(数据库)]
+    C --> D[(mysql数据库)]
     C --> E[七牛云服务]
     E --> F[ASR语音识别]
     E --> G[TTS文本转语音]
     E --> H[OSS对象存储]
     
-    style A fill:#FFE4C4,stroke:#333
-    style B fill:#87CEEB,stroke:#333
-    style C fill:#98FB98,stroke:#333
-    style D fill:#FFA07A,stroke:#333
-    style E fill:#DDA0DD,stroke:#333
-    style F fill:#FFD700,stroke:#333
-    style G fill:#FFD700,stroke:#333
-    style H fill:#FFD700,stroke:#333
+    style A fill:#FFE4C4,stroke:#333,fill-opacity:1,color:#000,font-weight:bold
+    style B fill:#87CEEB,stroke:#333,fill-opacity:1,color:#000,font-weight:bold
+    style C fill:#98FB98,stroke:#333,fill-opacity:1,color:#000,font-weight:bold
+    style D fill:#FFA07A,stroke:#333,fill-opacity:1,color:#000,font-weight:bold
+    style E fill:#DDA0DD,stroke:#333,fill-opacity:1,color:#000,font-weight:bold
+    style F fill:#FFD700,stroke:#333,fill-opacity:1,color:#000,font-weight:bold
+    style G fill:#FFD700,stroke:#333,fill-opacity:1,color:#000,font-weight:bold
+    style H fill:#FFD700,stroke:#333,fill-opacity:1,color:#000,font-weight:bold
 ```
 
 ### 前端技术栈
@@ -53,13 +53,13 @@ graph TD
     C --> F[语音输出模块]
     C --> G[消息显示模块]
     
-    style A fill:#87CEEB,stroke:#333
-    style B fill:#98FB98,stroke:#333
-    style C fill:#98FB98,stroke:#333
-    style D fill:#98FB98,stroke:#333
-    style E fill:#FFD700,stroke:#333
-    style F fill:#FFD700,stroke:#333
-    style G fill:#FFD700,stroke:#333
+    style A fill:#87CEEB,stroke:#333,fill-opacity:1,color:#000,font-weight:bold
+    style B fill:#98FB98,stroke:#333,fill-opacity:1,color:#000,font-weight:bold
+    style C fill:#98FB98,stroke:#333,fill-opacity:1,color:#000,font-weight:bold
+    style D fill:#98FB98,stroke:#333,fill-opacity:1,color:#000,font-weight:bold
+    style E fill:#FFD700,stroke:#333,fill-opacity:1,color:#000,font-weight:bold
+    style F fill:#FFD700,stroke:#333,fill-opacity:1,color:#000,font-weight:bold
+    style G fill:#FFD700,stroke:#333,fill-opacity:1,color:#000,font-weight:bold
 ```
 
 ### 后端技术栈
@@ -75,35 +75,22 @@ graph TD
     A --> C[Service层]
     A --> D[Repository层]
     A --> E[Config配置层]
-    B --> F[CharacterController]
-    B --> G[ChatMessageController]
-    B --> H[AsrController]
-    B --> I[TtsController]
-    C --> J[CharacterService]
-    C --> K[ChatMessageService]
-    C --> L[QiniuAsrService]
-    C --> M[QiniuTtsService]
-    D --> N[CharacterRepository]
-    D --> O[ChatMessageRepository]
-    E --> P[Qiniu配置类]
+    B --> F[CharacterController<br/>ChatMessageController<br/>AsrController<br/>TtsController]
+    C --> G[CharacterService<br/>ChatMessageService<br/>QiniuAsrService<br/>QiniuTtsService]
+    D --> H[CharacterRepository<br/>ChatMessageRepository]
+    E --> I[Qiniu配置类]
     
-    style A fill:#98FB98,stroke:#333
-    style B fill:#87CEEB,stroke:#333
-    style C fill:#87CEEB,stroke:#333
-    style D fill:#87CEEB,stroke:#333
-    style E fill:#87CEEB,stroke:#333
-    style F fill:#FFD700,stroke:#333
-    style G fill:#FFD700,stroke:#333
-    style H fill:#FFD700,stroke:#333
-    style I fill:#FFD700,stroke:#333
-    style J fill:#FFD700,stroke:#333
-    style K fill:#FFD700,stroke:#333
-    style L fill:#FFD700,stroke:#333
-    style M fill:#FFD700,stroke:#333
-    style N fill:#FFD700,stroke:#333
-    style O fill:#FFD700,stroke:#333
-    style P fill:#FFD700,stroke:#333
+    style A fill:#98FB98,stroke:#333,fill-opacity:1,color:#000,font-weight:bold
+    style B fill:#87CEEB,stroke:#333,fill-opacity:1,color:#000,font-weight:bold
+    style C fill:#87CEEB,stroke:#333,fill-opacity:1,color:#000,font-weight:bold
+    style D fill:#87CEEB,stroke:#333,fill-opacity:1,color:#000,font-weight:bold
+    style E fill:#87CEEB,stroke:#333,fill-opacity:1,color:#000,font-weight:bold
+    style F fill:#FFD700,stroke:#333,fill-opacity:1,color:#000,font-weight:bold
+    style G fill:#FFD700,stroke:#333,fill-opacity:1,color:#000,font-weight:bold
+    style H fill:#FFD700,stroke:#333,fill-opacity:1,color:#000,font-weight:bold
+    style I fill:#FFD700,stroke:#333,fill-opacity:1,color:#000,font-weight:bold
 ```
+
 
 ## 环境要求
 
@@ -269,4 +256,4 @@ npm run build
 
 ## 联系方式
 
-项目链接: [https://github.com/your-username/AI-Role-playing](https://github.com/your-username/AI-Role-playing)
+项目链接: [https://github.com/xin-24/AI-Role-playing](https://github.com/xin-24/AI-Role-playing)

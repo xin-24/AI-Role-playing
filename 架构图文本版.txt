@@ -50,10 +50,14 @@ AI角色扮演平台架构图（文本版）
 +----------------+ +-------------+ +------------------+
 | Controller层   | | Service层   | | Repository层     |
 +----------------+ +-------------+ +------------------+
-| Character      | | Character   | | Character        |
-| ChatMessage    | | ChatMessage | | ChatMessage      |
-| Asr            | | QiniuAsr    | |                  |
-| Tts            | | QiniuTts    | |                  |
+| CharacterController
+| ChatMessageController
+| AsrController
+| TtsController  | | CharacterService
+| ChatMessageService
+| QiniuAsrService
+| QiniuTtsService | | CharacterRepository
+| ChatMessageRepository | 
 +----------------+ +-------------+ +------------------+
           |
           v
