@@ -9,11 +9,12 @@ import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.io.entity.EntityUtils;
-import org.apache.hc.core5.http.io.entity.StringEntity;  // 添加这行导入
+import org.apache.hc.core5.http.io.entity.StringEntity; // 添加这行导入
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.ai.roleplay.config.QiniuAIConfig;
@@ -28,6 +29,10 @@ public class QiniuAIService {
 
     @Autowired
     private CharacterPromptService characterPromptService;
+
+    // 从配置文件读取最大回复长度，默认为500字符
+    @Value("${ai.max.response.length:500}")
+    private int maxResponseLength;
 
     /**
      * 根据用户输入的角色设定和对话历史生成AI回复
@@ -45,7 +50,7 @@ public class QiniuAIService {
 
         // 使用硬编码的角色提示词
         String systemPrompt = characterPromptService.getCharacterPrompt(characterName);
-        
+
         // 如果没有硬编码的提示词，则使用原有的动态构建方式
         if (systemPrompt.equals(characterPromptService.getDefaultPrompt())) {
             // 构建更自然的角色设定提示
@@ -77,7 +82,15 @@ public class QiniuAIService {
         logger.debug("用户消息: {}", conversationHistory.toString());
 
         // 调用七牛AI API
-        return callQiniuAI(systemPrompt, conversationHistory.toString());
+        String response = callQiniuAI(systemPrompt, conversationHistory.toString());
+
+        // 限制回复长度
+        if (response != null && response.length() > maxResponseLength) {
+            logger.info("AI回复长度超过限制，截取前{}个字符", maxResponseLength);
+            response = response.substring(0, maxResponseLength);
+        }
+
+        return response;
     }
 
     /**
@@ -176,9 +189,18 @@ public class QiniuAIService {
                     "。请检查网络连接或防火墙设置。", e);
         }
     }
-    
+
     // 添加getter方法，便于测试
     public CharacterPromptService getCharacterPromptService() {
         return characterPromptService;
+    }
+
+    // 添加maxResponseLength的getter和setter方法，便于测试和配置
+    public int getMaxResponseLength() {
+        return maxResponseLength;
+    }
+
+    public void setMaxResponseLength(int maxResponseLength) {
+        this.maxResponseLength = maxResponseLength;
     }
 }

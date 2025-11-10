@@ -7,7 +7,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpSession;
+
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/characters")
@@ -16,21 +19,55 @@ public class CharacterController {
 
     @Autowired
     private CharacterRepository characterRepository;
-    
+
     @Autowired
     private CharacterPromptService characterPromptService;
 
+    // 在每次请求前检查session中是否有用户标识，如果没有则生成一个
+    @ModelAttribute
+    public void addUserAttribute(HttpSession session) {
+        if (session.getAttribute("user_id") == null) {
+            String userId = UUID.randomUUID().toString();
+            session.setAttribute("user_id", userId);
+        }
+    }
+
     // 获取所有角色（包括数据库中的角色和硬编码的角色）
     @GetMapping
-    public List<Character> getAllCharacters() {
-        // 获取数据库中的所有角色
-        List<Character> dbCharacters = characterRepository.findAll();
-        
-        // 创建硬编码角色列表
+    public List<Character> getAllCharacters(HttpSession session) {
+        // 从session中获取用户ID
+        String userId = (String) session.getAttribute("user_id");
+
+        // 如果用户未登录，返回空列表或抛出异常
+        if (userId == null) {
+            // 可以选择返回空列表或抛出异常
+            // throw new RuntimeException("用户未登录");
+            return new ArrayList<>(); // 返回空列表
+        }
+
+        // 获取当前用户创建的角色
+        List<Character> userCharacters = characterRepository.findByUserId(userId);
+
+        // 获取硬编码角色（所有用户都能看到）
+        List<Character> hardcodedCharacters = getHardcodedCharacters(userCharacters);
+
+        // 合并两个列表
+        List<Character> allCharacters = new ArrayList<>();
+        allCharacters.addAll(hardcodedCharacters);
+        allCharacters.addAll(userCharacters);
+
+        return allCharacters;
+    }
+
+    // 获取硬编码角色
+    private List<Character> getHardcodedCharacters(List<Character> existingCharacters) {
         List<Character> hardcodedCharacters = new ArrayList<>();
-        
+        Set<String> existingNames = existingCharacters.stream()
+                .map(Character::getName)
+                .collect(Collectors.toSet());
+
         // 添加哈利·波特角色
-        if (!containsCharacter(dbCharacters, "哈利·波特")) {
+        if (!existingNames.contains("哈利·波特")) {
             Character harryPotter = new Character();
             harryPotter.setId(-1L); // 使用负数ID表示硬编码角色
             harryPotter.setName("哈利·波特");
@@ -38,12 +75,13 @@ public class CharacterController {
             harryPotter.setPersonalityTraits("勇敢、正直、有正义感、略带腼腆");
             harryPotter.setBackgroundStory("生活在霍格沃茨魔法学校，与朋友们一起对抗黑魔法师");
             harryPotter.setVoiceType("qiniu_zh_male_ljfdxz");
+            harryPotter.setOpeningRemarks("你好！(•̀ᴗ•́)و 呼，刚从魁地奇训练回来，累死了。你见过会飞的扫帚吗？超酷的！我叫哈利·波特，在格兰芬多上学～");
             harryPotter.setIsDeletable(false); // 硬编码角色不可删除
             hardcodedCharacters.add(harryPotter);
         }
-        
+
         // 添加苏格拉底角色
-        if (!containsCharacter(dbCharacters, "苏格拉底")) {
+        if (!existingNames.contains("苏格拉底")) {
             Character socrates = new Character();
             socrates.setId(-2L); // 使用负数ID表示硬编码角色
             socrates.setName("苏格拉底");
@@ -51,50 +89,83 @@ public class CharacterController {
             socrates.setPersonalityTraits("智慧、善于提问、谦逊、追求真理");
             socrates.setBackgroundStory("生活在古希腊，通过对话和提问来探索真理");
             socrates.setVoiceType("qiniu_zh_male_ybxknjs");
+            socrates.setOpeningRemarks("你好！我是苏格拉底，古希腊的哲学家。我最大的爱好就是提问和思考。让我们一起探讨智慧的奥秘吧！");
             socrates.setIsDeletable(false); // 硬编码角色不可删除
             hardcodedCharacters.add(socrates);
         }
-        
+
         // 添加英语老师角色
-        if (!containsCharacter(dbCharacters, "英语老师")) {
+        if (!existingNames.contains("林暖暖")) {
             Character musicTeacher = new Character();
             musicTeacher.setId(-3L); // 使用负数ID表示硬编码角色
-            musicTeacher.setName("英语老师");
-            musicTeacher.setDescription("经验丰富的英语教育工作者");
-            musicTeacher.setPersonalityTraits("耐心、热情、严谨、富有创造力");
-            musicTeacher.setBackgroundStory("拥有丰富的英语理论和实践经验，致力于英语教育");
+            musicTeacher.setName("林暖暖");
+            musicTeacher.setDescription("经验丰富的心里陪伴师");
+            musicTeacher.setPersonalityTraits("温柔细腻，善解人意，积极阳光");
+            musicTeacher.setBackgroundStory("创立的" + "暖暖倾听法" + "帮助数万人缓解情绪压力，获得良好口碑");
             musicTeacher.setVoiceType("qiniu_zh_female_zxjxnjs");
+            musicTeacher.setOpeningRemarks("你好！我是林暖暖，一个经验丰富的心里陪伴师。我可以帮助你缓解情绪压力，提升生活质量。");
             musicTeacher.setIsDeletable(false); // 硬编码角色不可删除
             hardcodedCharacters.add(musicTeacher);
         }
-        
-        // 合并两个列表
-        List<Character> allCharacters = new ArrayList<>();
-        allCharacters.addAll(hardcodedCharacters);
-        allCharacters.addAll(dbCharacters);
-        
-        return allCharacters;
-    }
-    
-    // 检查角色列表中是否已包含指定名称的角色
-    private boolean containsCharacter(List<Character> characters, String name) {
-        return characters.stream().anyMatch(c -> name.equals(c.getName()));
+
+        return hardcodedCharacters;
     }
 
     // 搜索角色
     @GetMapping("/search")
-    public List<Character> searchCharacters(@RequestParam("keyword") String keyword) {
-        return characterRepository
+    public List<Character> searchCharacters(@RequestParam("keyword") String keyword, HttpSession session) {
+        // 从session中获取用户ID
+        String userId = (String) session.getAttribute("user_id");
+
+        // 如果用户未登录，返回空列表或抛出异常
+        if (userId == null) {
+            // 可以选择返回空列表或抛出异常
+            // throw new RuntimeException("用户未登录");
+            return new ArrayList<>(); // 返回空列表
+        }
+
+        // 搜索当前用户创建的角色
+        List<Character> userCharacters = characterRepository.findByUserIdAndKeyword(userId, keyword);
+
+        // 搜索硬编码角色（所有用户都能看到）
+        List<Character> hardcodedCharacters = characterRepository
                 .findByNameContainingOrDescriptionContainingOrPersonalityTraitsContainingOrBackgroundStoryContainingAllIgnoreCase(
                         keyword, keyword, keyword, keyword);
+
+        // 过滤出硬编码角色
+        List<Character> filteredHardcodedCharacters = hardcodedCharacters.stream()
+                .filter(c -> c.getId() < 0) // 硬编码角色的ID为负数
+                .collect(Collectors.toList());
+
+        // 合并两个列表
+        List<Character> allCharacters = new ArrayList<>();
+        allCharacters.addAll(filteredHardcodedCharacters);
+        allCharacters.addAll(userCharacters);
+
+        return allCharacters;
     }
 
     // 创建新角色
     @PostMapping
-    public Character createCharacter(@RequestBody Character character) {
+    public Character createCharacter(@RequestBody Character character, HttpSession session) {
+        // 从session中获取用户ID
+        String userId = (String) session.getAttribute("user_id");
+
+        // 如果用户未登录，抛出异常
+        if (userId == null) {
+            throw new RuntimeException("用户未登录");
+        }
+
+        // 设置用户ID
+        character.setUserId(userId);
+
         // 如果没有指定音色，则设置默认音色
         if (character.getVoiceType() == null || character.getVoiceType().isEmpty()) {
             character.setVoiceType("qiniu_zh_female_wwxkjx"); // 默认音色
+        }
+        // 如果没有指定开场白，则设置默认开场白
+        if (character.getOpeningRemarks() == null || character.getOpeningRemarks().isEmpty()) {
+            character.setOpeningRemarks("你好！我是" + character.getName() + "很高兴与你交流～");
         }
         // 默认设置为可删除
         if (character.getIsDeletable() == null) {
@@ -105,15 +176,27 @@ public class CharacterController {
 
     // 删除角色
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteCharacter(@PathVariable("id") Long id) {
+    public ResponseEntity<?> deleteCharacter(@PathVariable("id") Long id, HttpSession session) {
         // 硬编码角色（ID为负数）不能删除
         if (id < 0) {
             return ResponseEntity.badRequest().body("该角色为系统默认角色，不可删除");
         }
-        
+
+        // 从session中获取用户ID
+        String userId = (String) session.getAttribute("user_id");
+
+        // 如果用户未登录，抛出异常
+        if (userId == null) {
+            return ResponseEntity.badRequest().body("用户未登录");
+        }
+
         Optional<Character> characterOptional = characterRepository.findById(id);
         if (characterOptional.isPresent()) {
             Character character = characterOptional.get();
+            // 检查角色是否属于当前用户
+            if (!userId.equals(character.getUserId())) {
+                return ResponseEntity.badRequest().body("您无权删除此角色");
+            }
             // 检查角色是否可以删除
             if (Boolean.FALSE.equals(character.getIsDeletable())) {
                 return ResponseEntity.badRequest().body("该角色为系统默认角色，不可删除");
@@ -156,5 +239,56 @@ public class CharacterController {
         voice.put("voice_name", name);
         voice.put("voice_type", type);
         return voice;
+    }
+
+    // 获取角色开场白
+    @GetMapping("/{id}/opening-remarks")
+    public ResponseEntity<?> getCharacterOpeningRemarks(@PathVariable("id") Long id, HttpSession session) {
+        try {
+            // 处理硬编码角色
+            if (id == -1L) {
+                // 哈利·波特
+                Map<String, String> response = new HashMap<>();
+                response.put("openingRemarks", "你好！(•̀ᴗ•́)و 呼，刚从魁地奇训练回来，累死了。你见过会飞的扫帚吗？超酷的！我叫哈利·波特，在格兰芬多上学～");
+                response.put("voiceType", "qiniu_zh_male_ljfdxz");
+                return ResponseEntity.ok(response);
+            } else if (id == -2L) {
+                // 苏格拉底
+                Map<String, String> response = new HashMap<>();
+                response.put("openingRemarks", "你好！我是苏格拉底，古希腊的哲学家。我最大的爱好就是提问和思考。让我们一起探讨智慧的奥秘吧！");
+                response.put("voiceType", "qiniu_zh_male_ybxknjs");
+                return ResponseEntity.ok(response);
+            } else if (id == -3L) {
+                // 英语老师
+                Map<String, String> response = new HashMap<>();
+                response.put("openingRemarks", "你好！我是林暖暖，一个经验丰富的心里陪伴师。我可以帮助你缓解情绪压力，提升生活质量。");
+                response.put("voiceType", "qiniu_zh_female_zxjxnjs");
+                return ResponseEntity.ok(response);
+            }
+
+            // 处理数据库中的角色
+            // 从session中获取用户ID
+            String userId = (String) session.getAttribute("user_id");
+
+            Optional<Character> characterOptional = characterRepository.findById(id);
+            if (characterOptional.isPresent()) {
+                Character character = characterOptional.get();
+                // 检查角色是否属于当前用户
+                if (!userId.equals(character.getUserId())) {
+                    return ResponseEntity.badRequest().body("您无权访问此角色");
+                }
+
+                Map<String, String> response = new HashMap<>();
+                response.put("openingRemarks",
+                        character.getOpeningRemarks() != null ? character.getOpeningRemarks() : "你好！很高兴与你交流～");
+                response.put("voiceType",
+                        character.getVoiceType() != null ? character.getVoiceType() : "qiniu_zh_female_wwxkjx");
+                return ResponseEntity.ok(response);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("获取角色开场白失败: " + e.getMessage());
+        }
     }
 }

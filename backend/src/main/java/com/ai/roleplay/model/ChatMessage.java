@@ -10,6 +10,9 @@ public class ChatMessage {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "user_id")
+    private String userId;
+
     @Column(name = "character_id")
     private Long characterId;
 
@@ -26,7 +29,8 @@ public class ChatMessage {
     public ChatMessage() {
     }
 
-    public ChatMessage(Long characterId, String message, Boolean isUserMessage) {
+    public ChatMessage(String userId, Long characterId, String message, Boolean isUserMessage) {
+        this.userId = userId;
         this.characterId = characterId;
         this.message = message;
         this.isUserMessage = isUserMessage;
@@ -39,6 +43,14 @@ public class ChatMessage {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 
     public Long getCharacterId() {

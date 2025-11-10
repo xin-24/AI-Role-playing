@@ -1,6 +1,6 @@
 package com.ai.roleplay.controller;
 
-import com.ai.roleplay.service.QiniuAsrService;
+import com.ai.roleplay.service.CloudServiceProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -12,7 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class AsrController {
 
     @Autowired
-    private QiniuAsrService qiniuAsrService;
+    private CloudServiceProvider cloudServiceProvider;
 
     /**
      * 专门用于ASR测试的端点 - 使用data字段方式
@@ -21,12 +21,12 @@ public class AsrController {
     public String transcribeAudio(@RequestParam("file") MultipartFile file) {
         try {
             // 使用data字段方式直接处理音频文件
-            return qiniuAsrService.transcribe(file);
+            return cloudServiceProvider.getAsrService().transcribeByUrl(file.getOriginalFilename());
         } catch (Exception e) {
             return "转录失败: " + e.getMessage();
         }
     }
-    
+
     /**
      * 专门用于ASR测试的端点 - 使用URL方式
      */
@@ -34,7 +34,7 @@ public class AsrController {
     public String transcribeAudioUrl(@RequestParam("url") String audioUrl) {
         try {
             // 使用URL方式处理音频文件
-            return qiniuAsrService.transcribeByUrl(audioUrl);
+            return cloudServiceProvider.getAsrService().transcribeByUrl(audioUrl);
         } catch (Exception e) {
             return "转录失败: " + e.getMessage();
         }

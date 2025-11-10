@@ -18,6 +18,9 @@ public class Character {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "user_id")
+    private String userId;
+
     @Column(nullable = false)
     private String name;
 
@@ -32,6 +35,9 @@ public class Character {
 
     @Column(name = "voice_type")
     private String voiceType;
+    
+    @Column(name = "opening_remarks", length = 2000)
+    private String openingRemarks;
 
     @Column(name = "is_deletable")
     private Boolean isDeletable = true; // 默认可删除
@@ -47,12 +53,13 @@ public class Character {
     }
 
     public Character(String name, String description, String personalityTraits,
-            String backgroundStory, String voiceType) {
+            String backgroundStory, String voiceType, String openingRemarks) {
         this.name = name;
         this.description = description;
         this.personalityTraits = personalityTraits;
         this.backgroundStory = backgroundStory;
         this.voiceType = voiceType;
+        this.openingRemarks = openingRemarks;
         this.isDeletable = true; // 默认可删除
     }
 
@@ -63,6 +70,14 @@ public class Character {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 
     public String getName() {
@@ -103,6 +118,14 @@ public class Character {
 
     public void setVoiceType(String voiceType) {
         this.voiceType = voiceType;
+    }
+    
+    public String getOpeningRemarks() {
+        return openingRemarks;
+    }
+    
+    public void setOpeningRemarks(String openingRemarks) {
+        this.openingRemarks = openingRemarks;
     }
 
     public Boolean getIsDeletable() {

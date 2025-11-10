@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.ai.roleplay.service.QiniuTtsService;
+import com.ai.roleplay.service.CloudServiceProvider;
 
 import java.util.Map;
 
@@ -21,7 +21,7 @@ import java.util.Map;
 public class TtsController {
 
     @Autowired
-    private QiniuTtsService ttsService;
+    private CloudServiceProvider cloudServiceProvider;
 
     @PostMapping(value = "/speak", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<byte[]> speak(@RequestBody Map<String, String> request) {
@@ -29,12 +29,9 @@ public class TtsController {
         String voice = request.get("voice"); // 角色特定音色
         String format = request.get("format");
 
-        // 如果没有指定音色，使用默认音色
-        if (voice == null || voice.isEmpty()) {
-            voice = "qiniu_zh_female_wwxkjx"; // 默认音色
-        }
+        // 使用CloudServiceProvider获取相应的TTS服务
+        byte[] audioBytes = cloudServiceProvider.getTtsService().synthesize(text, voice, format);
 
-        byte[] audioBytes = ttsService.synthesize(text, voice, format);
         MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
         if ("mp3".equalsIgnoreCase(format)) {
             mediaType = MediaType.valueOf("audio/mpeg");

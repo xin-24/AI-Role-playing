@@ -1,697 +1,359 @@
-.App {
-    text-align: center;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
-}
-
-.App-header {
-    background-color: #282c34;
-    padding: 20px;
-    color: white;
-    border-radius: 8px;
-    margin-bottom: 30px;
-}
-
-.App-header h1 {
+/* 全局样式优化 */
+* {
     margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-main {
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    min-height: 100vh;
+    color: #fff;
     display: flex;
-    flex-direction: column;
-    gap: 30px;
-}
-
-.search-section {
-    background-color: #f5f5f5;
-    padding: 20px;
-    border-radius: 8px;
-}
-
-.search-section form {
-    display: flex;
-    gap: 10px;
     justify-content: center;
-    flex-wrap: wrap;
-}
-
-.search-section button {
-    padding: 10px 20px;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.search-section button:hover {
-    background-color: #0056b3;
-}
-
-.main-content {
-    display: flex;
-    gap: 30px;
-    height: 600px;
-}
-
-/* 角色列表 - 固定在左侧 */
-.characters-section {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-
-/* 对话区域 - 固定在右侧 */
-.chat-section {
-    flex: 2;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-
-/* 哈利·波特对话区域背景 */
-.chat-section.harry-potter-chat .chat-messages {
-    background-image: url('/BackgroundOfHarryPotter.png');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    /* 添加磨砂玻璃效果 */
-    background-color: rgba(248, 249, 250, 0.7);
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
-}
-
-.chat-section.harry-potter-chat .chat-input {
-    background-color: rgba(255, 255, 255, 0.7); /* 半透明背景，确保输入框可见 */
-}
-
-/* 苏格拉底对话区域背景 */
-.chat-section.socrates-chat .chat-messages {
-    background-image: url('/SocratesBackground.png');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    /* 添加磨砂玻璃效果 */
-    background-color: rgba(248, 249, 250, 0.7);
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
-}
-
-.chat-section.socrates-chat .chat-input {
-    background-color: rgba(255, 255, 255, 0.7); /* 半透明背景，确保输入框可见 */
-}
-
-/* 英语老师对话区域背景 */
-.chat-section.english-teacher-chat .chat-messages {
-    background-image: url('/EnglishTeacher.png');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    /* 添加磨砂玻璃效果 */
-    background-color: rgba(248, 249, 250, 0.7);
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
-}
-
-.chat-section.english-teacher-chat .chat-input {
-    background-color: rgba(255, 255, 255, 0.7); /* 半透明背景，确保输入框可见 */
-}
-
-/* 默认背景 */
-.chat-section.default-background .chat-messages {
-    background-image: url('/defultImage.png');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    /* 添加磨砂玻璃效果 */
-    background-color: rgba(248, 249, 250, 0.7);
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
-}
-
-.chat-section.default-background .chat-input {
-    background-color: rgba(255, 255, 255, 0.7); /* 半透明背景，确保输入框可见 */
-}
-
-.characters-section h2,
-.add-character-section h2,
-.chat-section h2 {
-    text-align: left;
-    color: #333;
-    border-bottom: 2px solid #007bff;
-    padding-bottom: 10px;
-    margin-top: 0;
-}
-
-.characters-grid {
-    flex: 1;
-    overflow-y: auto;
-    padding: 10px;
-    background-color: #f8f9fa;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-}
-
-.character-card {
-    background-color: white;
-    border: 1px solid #ddd;
-    border-radius: 8px;
+    align-items: center;
     padding: 20px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    text-align: left;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    margin-bottom: 15px;
+    overflow-x: hidden;
 }
 
-.character-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-}
-
-.character-card.selected {
-    border-color: #007bff;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-}
-
-.character-card h3 {
-    margin-top: 0;
-    color: #007bff;
-}
-
-.character-card p {
-    margin: 10px 0;
-}
-
-.character-card strong {
-    color: #333;
-}
-
-.delete-character-button {
-    background-color: #dc3545;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    padding: 8px 16px;
-    cursor: pointer;
-    margin-top: 10px;
-    font-size: 14px;
-}
-
-.delete-character-button:hover {
-    background-color: #c82333;
-}
-
-.chat-container {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-.chat-messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-    background-color: #f8f9fa;
-}
-
-/* 全屏模式下的聊天消息区域 */
-.chat-section.fullscreen .chat-messages {
+.cyber-grid {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100vw;
-    height: calc(100vh - 44px); /* 减去chat-input的高度 */
-    z-index: 1000;
-    padding: 20px;
-    box-sizing: border-box;
-    background-color: #f8f9fa;
+    width: 100%;
+    height: 100%;
+    background-image:
+        linear-gradient(rgba(18, 16, 48, 0.7) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(18, 16, 48, 0.7) 1px, transparent 1px);
+    background-size: 50px 50px;
+    z-index: -1;
 }
 
-/* 全屏模式下的消息内容 */
-.chat-section.fullscreen .message-content {
-    max-width: 90%;
-}
-
-/* 全屏模式下的输入区域 */
-.chat-section.fullscreen .chat-input {
-    position: fixed;
-    bottom: 0;
+.floating-elements {
+    position: absolute;
+    top: 0;
     left: 0;
-    width: 100vw;
-    height: 44px;
-    z-index: 1001;
-    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: -1;
 }
 
-.message {
-    margin-bottom: 15px;
-    display: flex;
-    flex-direction: column;
-}
-
-.user-message {
-    align-items: flex-end;
-}
-
-.ai-message {
-    align-items: flex-start;
-}
-
-.message-content {
-    max-width: 80%;
-    padding: 10px 15px;
-    border-radius: 18px;
-    word-wrap: break-word;
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.user-message .message-content {
-    background-color: #007bff;
-    color: white;
-    border-bottom-right-radius: 4px;
-}
-
-.ai-message .message-content {
-    background-color: #e9ecef;
-    color: #333;
-    border-bottom-left-radius: 4px;
-}
-
-.ai-message .message-content.playing {
-    background-color: #d1ecf1;
-    border: 2px solid #007bff;
-    animation: pulse-border 2s infinite;
-}
-
-@keyframes pulse-border {
-    0% {
-        border-color: #007bff;
-    }
-
-    50% {
-        border-color: #17a2b8;
-    }
-
-    100% {
-        border-color: #007bff;
-    }
-}
-
-/* 添加语音播放指示器 */
-.voice-indicator {
-    display: inline-block;
+.floating-element {
+    position: absolute;
     width: 10px;
     height: 10px;
-    background-color: #007bff;
     border-radius: 50%;
-    margin-left: 5px;
-    animation: pulse 1.5s infinite;
+    background: rgba(102, 126, 234, 0.3);
+    box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+    animation: float 15s infinite linear;
 }
 
-@keyframes pulse {
-    0% {
-        transform: scale(0.8);
-        opacity: 0.7;
-    }
+.floating-element:nth-child(1) {
+    top: 20%;
+    left: 10%;
+    animation-delay: 0s;
+}
 
-    50% {
-        transform: scale(1.2);
+.floating-element:nth-child(2) {
+    top: 60%;
+    left: 80%;
+    animation-delay: -5s;
+}
+
+.floating-element:nth-child(3) {
+    top: 80%;
+    left: 20%;
+    animation-delay: -10s;
+}
+
+@keyframes float {
+    0% {
+        transform: translateY(0) rotate(0deg);
         opacity: 1;
     }
 
     100% {
-        transform: scale(0.8);
-        opacity: 0.7;
+        transform: translateY(-100px) rotate(360deg);
+        opacity: 0;
     }
 }
 
-.voice-button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 18px;
-    padding: 5px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.2s;
-}
-
-.voice-button:hover {
-    background-color: rgba(0, 0, 0, 0.1);
-}
-
-.message-time {
-    font-size: 0.75rem;
-    color: #6c757d;
-    margin-top: 5px;
-}
-
-.chat-input {
-    display: flex;
-    padding: 15px;
-    background-color: white;
-    border-top: 1px solid #ddd;
-    height: 44px;
-    min-height: 44px;
-    align-items: center;
-}
-
-.chat-input textarea {
-    flex: 1;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    resize: none;
-    min-height: 44px;
-    max-height: 44px;
-    line-height: 1.2; /* 控制行高防止文字突出 */
-    box-sizing: border-box; /* 确保padding包含在height内 */
-}
-
-.chat-input button {
-    margin-left: 10px;
-    padding: 10px 20px;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    align-self: flex-end;
-    height: 44px;
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.chat-input button:hover {
-    background-color: #0056b3;
-}
-
-/* 全屏切换按钮样式 */
-.fullscreen-toggle-button {
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    padding: 8px 12px;
-    background-color: rgba(0, 123, 255, 0.8);
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    z-index: 1002; /* 提高z-index确保在全屏模式下可见 */
-}
-
-.fullscreen-toggle-button:hover {
-    background-color: rgba(0, 123, 255, 1);
-}
-
-/* 全屏模式下的全屏切换按钮 */
-.chat-section.fullscreen .fullscreen-toggle-button {
-    top: 10px;
-    right: 10px;
-    z-index: 1003; /* 确保在全屏模式下按钮始终可见 */
-}
-
-/* 全屏模式下的聊天区域 */
-.chat-section.fullscreen {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
+.app {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
     height: 100vh;
-    z-index: 1000;
-    background-color: #f8f9fa;
-}
-
-.chat-section.fullscreen .chat-container {
-    height: 100vh;
-    border: none;
-    border-radius: 0;
     display: flex;
     flex-direction: column;
 }
 
-.chat-section.fullscreen h2 {
-    display: none;
-}
-
-.chat-section.fullscreen .chat-messages {
-    flex: 1;
-    overflow-y: auto;
-    padding: 20px;
-    box-sizing: border-box;
-    background-color: #f8f9fa;
-    height: calc(100vh - 44px); /* 减去chat-input的高度 */
-}
-
-/* 全屏模式下的输入区域 */
-.chat-section.fullscreen .chat-input {
-    height: 44px;
-    min-height: 44px;
-    padding: 0 15px;
-    box-sizing: border-box;
-    background-color: white;
-    border-top: 1px solid #ddd;
-    display: flex;
-    align-items: center;
-}
-
-.chat-section.fullscreen .chat-input textarea {
-    flex: 1;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    resize: none;
-    min-height: 44px;
-    max-height: 44px;
-    margin-right: 10px;
-    line-height: 1.2; /* 控制行高防止文字突出 */
-    box-sizing: border-box; /* 确保padding包含在height内 */
-}
-
-.chat-section.fullscreen .chat-input button {
-    margin-left: 10px;
-    padding: 10px 20px;
-    background-color: #007bff;
+/* 头部样式优化 */
+.app-header {
+    background: rgba(22, 18, 58, 0.8);
     color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    align-self: flex-end;
-    height: 44px;
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.chat-section.fullscreen .chat-input button:hover {
-    background-color: #0056b3;
-}
-
-.chat-section.fullscreen .mic-button {
-    margin-left: 10px;
-    padding: 10px 14px;
-    background-color: #6c757d;
-    color: #fff;
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    align-self: flex-end;
-    width: 44px;
-    height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 44px;
-    min-width: 44px;
-}
-
-.chat-section.fullscreen .mic-button:hover {
-    background-color: #5a6268;
-}
-
-.chat-section.fullscreen .mic-button.recording {
-    background-color: #dc3545;
-    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.2);
-}
-
-.chat-section.fullscreen .recording-indicator {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    color: #dc3545;
-    font-size: 14px;
-    margin-right: 10px;
-}
-
-.chat-section.fullscreen .transcribing-indicator {
-    color: #6c757d;
-    font-size: 14px;
-    margin-right: 10px;
-}
-
-.chat-section.fullscreen .stop-voice-button {
-    margin-left: 10px;
-    padding: 10px 20px;
-    background-color: #6c757d;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    align-self: flex-end;
-    height: 44px;
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.add-character-section form {
-    background-color: white;
-    border: 1px solid #ddd;
-    border-radius: 8px;
     padding: 20px;
-    text-align: left;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    position: relative;
+    border-bottom: 1px solid rgba(92, 70, 156, 0.3);
+    overflow: hidden;
 }
 
-/* 语音输入按钮样式 */
-.mic-button {
-    margin-left: 10px;
-    padding: 10px 14px;
-    background-color: #6c757d;
-    color: #fff;
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    align-self: flex-end;
-    width: 44px;
-    height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 44px;
-    min-width: 44px;
-}
-
-.mic-button:hover {
-    background-color: #5a6268;
-}
-
-.mic-button.recording {
-    background-color: #dc3545;
-    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.2);
-}
-
-/* 录音状态提示 */
-.recording-indicator {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    color: #dc3545;
-    font-size: 14px;
-    margin-right: 10px;
-}
-
-.recording-indicator .dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: #dc3545;
-    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
-    animation: pulse 1.2s infinite;
-}
-
-/* 转写提示 */
-.transcribing-indicator {
-    color: #6c757d;
-    font-size: 14px;
-    margin-right: 10px;
-}
-
-@keyframes pulse {
-    0% {
-        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
-    }
-
-    70% {
-        box-shadow: 0 0 0 8px rgba(220, 53, 69, 0);
-    }
-
-    100% {
-        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
-    }
-}
-
-.add-character-section div {
-    margin-bottom: 15px;
-}
-
-.add-character-section input,
-.add-character-section textarea,
-.add-character-section select {
+.header-glow {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    box-sizing: border-box;
+    height: 5px;
+    background: linear-gradient(90deg, #ff00cc, #3333ff);
+    box-shadow: 0 0 10px #ff00cc, 0 0 20px #ff00cc;
 }
 
-.add-character-section textarea {
-    min-height: 80px;
-    resize: vertical;
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
 }
 
-.add-character-section button {
-    padding: 12px 24px;
-    background-color: #28a745;
+.app-header h1 {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 600;
+    background: linear-gradient(90deg, #ff00cc, #3333ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    flex: 1;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: rgba(30, 25, 70, 0.7);
+    padding: 8px 15px;
+    border-radius: 20px;
+    border: 1px solid rgba(92, 70, 156, 0.5);
+}
+
+.user-info span {
+    font-weight: 500;
+    color: #a0a0c0;
+}
+
+.logout-button {
+    background: linear-gradient(135deg, #667eea, #764ba2);
     color: white;
     border: none;
-    border-radius: 4px;
+    padding: 6px 12px;
+    border-radius: 15px;
     cursor: pointer;
-    font-size: 16px;
-    margin-right: 10px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
 }
 
-.add-character-section button:hover {
-    background-color: #218838;
+.logout-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
 }
 
-.form-actions {
+.loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-size: 1.2rem;
+}
+
+/* 主内容区域 */
+.app-main {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    padding: 20px 0;
+}
+
+.main-content {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    gap: 20px;
+}
+
+/* 角色列表区域 */
+.characters-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: rgba(15, 12, 41, 0.7);
+    border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    padding: 20px;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(92, 70, 156, 0.3);
+}
+
+.characters-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(92, 70, 156, 0.3);
+    position: relative;
+    flex-direction: row;
+}
+
+.characters-header::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.7), transparent);
+}
+
+.characters-header h2 {
+    color: white;
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    background: linear-gradient(90deg, #ff00cc, #3333ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    flex: 1;
+    text-align: center;
+}
+
+.add-character-button {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 120px;
+    height: 40px;
+    margin-left: 20px;
+}
+
+.add-character-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+/* 搜索区域优化 */
+.search-form {
     display: flex;
     gap: 10px;
-    justify-content: flex-start;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 25px;
+    padding: 12px;
+    background: rgba(30, 25, 70, 0.7);
+    border-radius: 50px;
+    align-items: center;
+    border: 1px solid rgba(92, 70, 156, 0.5);
 }
 
-.form-actions button:nth-child(2) {
-    background-color: #6c757d;
+.search-form input {
+    flex: 1;
+    padding: 10px 15px;
+    border: 1px solid rgba(92, 70, 156, 0.5);
+    border-radius: 50px;
+    background: rgba(30, 25, 70, 0.7);
+    color: white;
+    font-size: 14px;
+    min-width: 200px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
 }
 
-.form-actions button:nth-child(2):hover {
-    background-color: #5a6268;
+.search-form input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+}
+
+.search-form input::placeholder {
+    color: #a0a0c0;
+}
+
+.search-form button {
+    padding: 8px 15px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    width: 80px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.search-form button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.clear-search-button {
+    padding: 8px 15px;
+    background: linear-gradient(135deg, #ffc107, #e0a800);
+    color: #333;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    box-shadow: 0 4px 15px rgba(255, 193, 7, 0.4);
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.clear-search-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 193, 7, 0.6);
+}
+
+/* 角色网格布局 */
+.characters-grid {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+@media (max-width: 1200px) {
+    .characters-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
 @media (max-width: 768px) {
-    .App {
-        padding: 10px;
-    }
-
-    .search-section input {
-        min-width: 200px;
-    }
-
     .characters-grid {
         grid-template-columns: 1fr;
     }
@@ -701,54 +363,752 @@ main {
         height: auto;
     }
 
-    .message-content {
-        max-width: 90%;
+    .search-form {
+        flex-direction: column;
+        align-items: center;
     }
 
-    .chat-section,
-    .characters-section {
+    .search-form input {
+        width: 100%;
+        max-width: 300px;
+    }
+}
+
+/* 角色卡片优化 */
+.character-card {
+    background: rgba(30, 25, 70, 0.7);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 1px solid rgba(92, 70, 156, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.character-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px rgba(102, 126, 234, 0.4);
+}
+
+.character-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(102, 126, 234, 0.7), transparent);
+}
+
+.character-card h3 {
+    color: white;
+    margin: 0 0 10px 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.character-card p {
+    color: #a0a0c0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: 15px;
+}
+
+.character-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+.chat-button {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    transition: all 0.3s ease;
+    flex: 1;
+}
+
+.chat-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.delete-button {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+    transition: all 0.3s ease;
+    flex: 1;
+}
+
+.delete-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 107, 107, 0.6);
+}
+
+/* 聊天区域优化 - 未来科技风格 */
+.chat-section {
+    flex: 2;
+    display: flex;
+    flex-direction: column;
+    background: rgba(15, 12, 41, 0.7);
+    border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(92, 70, 156, 0.3);
+    position: relative;
+    height: 100%;
+}
+
+.chat-section.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1000;
+    border-radius: 0;
+}
+
+.chat-header {
+    background: rgba(22, 18, 58, 0.8);
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    border-bottom: 1px solid rgba(92, 70, 156, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.chat-header .header-glow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 5px;
+    background: linear-gradient(90deg, #ff00cc, #3333ff);
+    box-shadow: 0 0 10px #ff00cc, 0 0 20px #ff00cc;
+}
+
+.avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 20px;
+    box-shadow: 0 0 15px rgba(102, 126, 234, 0.7);
+    position: relative;
+    overflow: hidden;
+    color: white;
+}
+
+.avatar::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transform: rotate(45deg);
+    animation: shine 3s infinite;
+}
+
+@keyframes shine {
+    0% {
+        transform: translateX(-100%) translateY(-100%) rotate(45deg);
+    }
+
+    100% {
+        transform: translateX(100%) translateY(100%) rotate(45deg);
+    }
+}
+
+.contact-info h2 {
+    font-size: 18px;
+    margin-bottom: 5px;
+    background: linear-gradient(90deg, #ff00cc, #3333ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 700;
+}
+
+.contact-info p {
+    font-size: 13px;
+    color: #a0a0c0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #00ff00;
+    box-shadow: 0 0 5px #00ff00;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+.header-buttons {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.back-button {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 20px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.back-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.fullscreen-toggle-button {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.fullscreen-toggle-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.chat-header-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.record-button {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.record-button.recording {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+    animation: pulse 1.5s infinite;
+}
+
+.record-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.stop-record-button {
+    background: linear-gradient(135deg, #ffc107, #e0a800);
+    color: #333;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(255, 193, 7, 0.4);
+}
+
+.chat-container {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    background-image:
+        linear-gradient(rgba(18, 16, 48, 0.7) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(18, 16, 48, 0.7) 1px, transparent 1px);
+    background-size: 30px 30px;
+}
+
+/* 自定义滚动条 */
+.chat-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.chat-container::-webkit-scrollbar-track {
+    background: rgba(15, 12, 41, 0.5);
+    border-radius: 10px;
+}
+
+.chat-container::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #667eea, #764ba2);
+    border-radius: 10px;
+}
+
+/* 消息气泡优化 - 未来科技风格 */
+.message {
+    max-width: 70%;
+    padding: 15px 20px;
+    border-radius: 18px;
+    position: relative;
+    animation: messageAppear 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes messageAppear {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.user-message {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.8), rgba(118, 75, 162, 0.8));
+    align-self: flex-end;
+    border-bottom-right-radius: 5px;
+    position: relative;
+    overflow: hidden;
+}
+
+.user-message::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+}
+
+.ai-message {
+    background: rgba(30, 25, 70, 0.7);
+    align-self: flex-start;
+    border-bottom-left-radius: 5px;
+    border: 1px solid rgba(92, 70, 156, 0.3);
+}
+
+.message-content {
+    font-size: 15px;
+    line-height: 1.5;
+    color: white;
+}
+
+.ai-message .message-content.playing {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3));
+    border: 2px solid #667eea;
+    animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+    0% {
+        border-color: #667eea;
+    }
+
+    50% {
+        border-color: #764ba2;
+    }
+
+    100% {
+        border-color: #667eea;
+    }
+}
+
+/* 语音播放指示器 */
+.voice-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    background-color: #667eea;
+    border-radius: 50%;
+    margin-left: 8px;
+    animation: pulse 1.5s infinite;
+}
+
+.message-time {
+    font-size: 11px;
+    color: #a0a0c0;
+    margin-top: 8px;
+    text-align: right;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 5px;
+}
+
+.message-status {
+    font-size: 12px;
+}
+
+/* 聊天输入区域优化 - 未来科技风格 */
+.chat-input {
+    padding: 20px;
+    background: rgba(22, 18, 58, 0.8);
+    border-top: 1px solid rgba(92, 70, 156, 0.3);
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.message-input {
+    flex: 1;
+    padding: 15px 20px;
+    background: rgba(30, 25, 70, 0.7);
+    border: 1px solid rgba(92, 70, 156, 0.5);
+    border-radius: 50px;
+    color: white;
+    font-size: 15px;
+    outline: none;
+    transition: all 0.3s;
+}
+
+.message-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+}
+
+.message-input::placeholder {
+    color: #a0a0c0;
+}
+
+.send-button {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.send-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.send-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.send-button:active {
+    transform: translateY(0);
+}
+
+.recording-indicator,
+.transcribing-indicator {
+    background: linear-gradient(135deg, #ffc107, #e0a800);
+    color: #333;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 15px rgba(255, 193, 7, 0.4);
+}
+
+.recording-indicator .dot {
+    width: 8px;
+    height: 8px;
+    background-color: #dc3545;
+    border-radius: 50%;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
+}
+
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 10px 20px;
+    background: rgba(30, 25, 70, 0.7);
+    border-radius: 18px;
+    align-self: flex-start;
+    border-bottom-left-radius: 5px;
+    border: 1px solid rgba(92, 70, 156, 0.3);
+    margin-bottom: 10px;
+    width: fit-content;
+}
+
+.typing-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #a0a0c0;
+    animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-dot:nth-child(1) {
+    animation-delay: -0.32s;
+}
+
+.typing-dot:nth-child(2) {
+    animation-delay: -0.16s;
+}
+
+@keyframes typing {
+
+    0%,
+    80%,
+    100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+
+    40% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* 添加角色表单优化 */
+.add-character-section {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(15, 12, 41, 0.9);
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(92, 70, 156, 0.5);
+}
+
+.add-character-section h2 {
+    text-align: center;
+    color: white;
+    margin-bottom: 25px;
+    font-size: 1.8rem;
+    font-weight: 600;
+    background: linear-gradient(90deg, #ff00cc, #3333ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.add-character-section form {
+    background: rgba(30, 25, 70, 0.7);
+    border-radius: 12px;
+    padding: 25px;
+    border: 1px solid rgba(92, 70, 156, 0.5);
+}
+
+.add-character-section div {
+    margin-bottom: 20px;
+}
+
+.add-character-section input,
+.add-character-section textarea,
+.add-character-section select {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid rgba(92, 70, 156, 0.5);
+    border-radius: 8px;
+    box-sizing: border-box;
+    font-size: 16px;
+    background: rgba(22, 18, 58, 0.8);
+    color: white;
+    transition: all 0.3s ease;
+}
+
+.add-character-section input:focus,
+.add-character-section textarea:focus,
+.add-character-section select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+}
+
+.add-character-section input::placeholder,
+.add-character-section textarea::placeholder {
+    color: #a0a0c0;
+}
+
+.add-character-section textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.add-character-section button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    margin-right: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.add-character-section button[type="submit"] {
+    background: linear-gradient(135deg, #28a745, #218838);
+    color: white;
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+}
+
+.add-character-section button[type="submit"]:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.6);
+}
+
+.form-actions button:nth-child(2) {
+    background: linear-gradient(135deg, #6c757d, #5a6268);
+    color: white;
+    box-shadow: 0 4px 15px rgba(108, 117, 125, 0.4);
+}
+
+.form-actions button:nth-child(2):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(108, 117, 125, 0.6);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .app {
+        padding: 10px;
+    }
+
+    .app-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .main-content {
+        flex-direction: column;
         height: auto;
     }
 
-    .characters-grid {
-        max-height: 400px;
+    .characters-section,
+    .chat-section {
+        height: auto;
     }
-    
-    /* 移动端全屏模式调整 */
-    .chat-section.fullscreen .message-content {
-        max-width: 95%;
+
+    .message {
+        max-width: 85%;
     }
-    
-    .fullscreen-toggle-button {
-        top: 5px;
-        right: 5px;
-        padding: 6px 10px;
-        font-size: 14px;
+
+    .add-character-section {
+        width: 95%;
+        padding: 20px;
     }
-    
-    /* 移动端全屏模式下的输入区域 */
-    .chat-section.fullscreen .chat-input {
-        padding: 0 10px;
+
+    .chat-header {
+        flex-direction: row;
+        gap: 10px;
+        text-align: left;
     }
-    
-    .chat-section.fullscreen .chat-input textarea {
-        padding: 8px;
-        margin-right: 5px;
-        line-height: 1.2; /* 控制行高防止文字突出 */
-        box-sizing: border-box; /* 确保padding包含在height内 */
+
+    .chat-header-actions {
+        width: auto;
+        justify-content: flex-end;
     }
-    
-    .chat-section.fullscreen .chat-input button {
-        padding: 8px 15px;
-        margin-left: 5px;
+
+    .chat-input {
+        flex-direction: row;
+        padding: 15px;
     }
-    
-    .chat-section.fullscreen .mic-button {
-        padding: 8px 12px;
-        margin-left: 5px;
-        width: 40px;
-        height: 40px;
-        min-height: 40px;
-        min-width: 40px;
+
+    .chat-input textarea {
+        width: auto;
+    }
+
+    .chat-input button {
+        width: auto;
+    }
+
+    .chat-section.fullscreen .chat-container {
+        height: calc(100vh - 140px);
     }
 }

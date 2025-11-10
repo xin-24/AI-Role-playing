@@ -11,6 +11,13 @@ import java.util.List;
 @Repository
 public interface CharacterRepository extends JpaRepository<Character, Long> {
 
+    // 根据用户ID查找角色
+    List<Character> findByUserId(String userId);
+
+    // 根据用户ID和关键词查找角色
+    @Query("SELECT c FROM Character c WHERE c.userId = :userId AND (LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(c.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    List<Character> findByUserIdAndKeyword(@Param("userId") String userId, @Param("keyword") String keyword);
+
     @Query("SELECT c FROM Character c WHERE LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(c.description) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     List<Character> searchCharacters(@Param("keyword") String keyword);
 

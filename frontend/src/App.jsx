@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
+import Login from './components/Login';
 
 function App() {
+    // 所有状态和引用必须在组件顶层定义
+    const [currentUser, setCurrentUser] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
     const [characters, setCharacters] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [newCharacter, setNewCharacter] = useState({
@@ -18,23 +22,304 @@ function App() {
     const [isSending, setIsSending] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [currentPlayingMessage, setCurrentPlayingMessage] = useState(null);
-    const [isFullscreen, setIsFullscreen] = useState(false); // 添加全屏状态
+    const [isFullscreen, setIsFullscreen] = useState(false);
     const chatContainerRef = useRef(null);
     const charactersContainerRef = useRef(null);
+
     // Web Speech API相关状态
     const [availableVoices, setAvailableVoices] = useState([]);
-    // 语音输入相关（改为MediaRecorder -> 后端ASR转写）
+
+    // 语音输入相关
     const [isRecording, setIsRecording] = useState(false);
     const [isTranscribing, setIsTranscribing] = useState(false);
     const mediaRecorderRef = useRef(null);
     const recordedChunksRef = useRef([]);
 
+    // 所有useEffect必须在组件顶层定义
+    // 检查用户是否已登录
+    useEffect(() => {
+        checkCurrentUser();
+    }, []);
+
     // 获取所有角色
     useEffect(() => {
-        fetchCharacters();
-        // 初始化Web Speech API
-        initSpeechSynthesis();
-    }, []);
+        if (currentUser && !isLoading) {
+            fetchCharacters();
+            // 初始化Web Speech API
+            initSpeechSynthesis();
+        }
+    }, [currentUser, isLoading]);
+
+    // 滚动到最新消息
+    useEffect(() => {
+        if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+    }, [chatMessages]);
+
+    // 所有函数必须在组件顶层定义
+    const checkCurrentUser = async () => {
+        try {
+            const response = await fetch('/api/auth/me', {
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                const userData = await response.json();
+                setCurrentUser(userData);
+            }
+        } catch (error) {
+            console.error('检查用户登录状态失败:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleLogin = (user) => {
+        setCurrentUser(user);
+    };
+
+    const handleLogout = async () => {
+        try {
+            await fetch('/api/auth/logout', {
+                method: 'POST',
+                credentials: 'include'
+            });
+            setCurrentUser(null);
+        } catch (error) {
+            console.error('登出失败:', error);
+        }
+    };
+
+    // 初始化Web Speech API
+    const initSpeechSynthesis = () => {
+        if ('speechSynthesis' in window) {
+            // 获取可用的语音列表
+            const loadVoices = () => {
+                const voices = window.speechSynthesis.getVoices();
+                setAvailableVoices(voices);
+            };
+
+            // 某些浏览器需要延迟加载语音列表
+            if (window.speechSynthesis.onvoiceschanged !== undefined) {
+                window.speechSynthesis.onvoiceschanged = loadVoices;
+            }
+
+            loadVoices();
+        } else {
+            console.warn('Web Speech API 不支持当前浏览器');
+        }
+    };
+
+    const fetchCharacters = async () => {
+        try {
+            const response = await fetch('/api/characters', {
+                credentials: 'include'
+            });
+            const data = await response.json();
+            setCharacters(data);
+        } catch (error) {
+            console.error('获取角色失败:', error);
+        }
+    };
+
+    // 获取所有音色选项
+    const fetchVoiceList = async () => {
+        try {
+            const response = await fetch('/api/characters/voices', {
+                credentials: 'include'
+            });
+            const data = await response.json();
+            setAvailableVoices(data);
+        } catch (error) {
+            console.error('获取音色列表失败:', error);
+            // 使用默认音色列表
+            setAvailableVoices([
+                { voice_name: "温婉学科讲师", voice_type: "qiniu_zh_female_wwxkjx" },
+                { voice_name: "甜美教学小源", voice_type: "qiniu_zh_female_tmjxxy" },
+                { voice_name: "校园清新学姐", voice_type: "qiniu_zh_female_xyqxxj" },
+                { voice_name: "邻家辅导学长", voice_type: "qiniu_zh_male_ljfdxz" },
+                { voice_name: "温和学科小哥", voice_type: "qiniu_zh_male_whxkxg" }
+            ]);
+        }
+    };
+
+    // 预览音色
+    const previewVoice = async (voiceType) => {
+        if (!voiceType) return;
+
+        try {
+            const text = "你好，欢迎使用FutureBuddy";
+            const resp = await fetch('/api/tts/speak', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    text: text,
+                    voice: voiceType,
+                    format: 'mp3'
+                })
+            });
+
+            if (!resp.ok) throw new Error(`TTS接口错误: ${resp.status}`);
+            const contentType = resp.headers.get('content-type') || '';
+            if (!contentType.includes('audio')) throw new Error(`返回非音频类型: ${contentType}`);
+            const arrayBuffer = await resp.arrayBuffer();
+            if (!arrayBuffer || arrayBuffer.byteLength === 0) throw new Error('音频为空');
+            const blob = new Blob([arrayBuffer], { type: contentType });
+            const url = URL.createObjectURL(blob);
+            const audio = new Audio(url);
+            audio.onended = () => URL.revokeObjectURL(url);
+            audio.onerror = () => URL.revokeObjectURL(url);
+            await audio.play();
+        } catch (e) {
+            console.error('音色预览失败:', e);
+            alert('音色预览失败');
+        }
+    };
+
+    // 搜索角色
+    const searchCharacters = async () => {
+        if (!searchTerm.trim()) {
+            fetchCharacters();
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/characters/search?keyword=${encodeURIComponent(searchTerm)}`, {
+                credentials: 'include'
+            });
+            const data = await response.json();
+            setCharacters(data);
+        } catch (error) {
+            console.error('搜索角色失败:', error);
+        }
+    };
+
+    // 创建新角色
+    const createCharacter = async () => {
+        // 如果没有选择音色，使用推荐音色
+        const characterData = {
+            ...newCharacter,
+            voiceType: newCharacter.voiceType || recommendVoice()
+        };
+
+        try {
+            const response = await fetch('/api/characters', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify(characterData),
+            });
+
+            if (response.ok) {
+                const createdCharacter = await response.json();
+                setCharacters([...characters, createdCharacter]);
+                // 重置表单
+                setNewCharacter({
+                    name: '',
+                    description: '',
+                    personalityTraits: '',
+                    backgroundStory: '',
+                    voiceType: ''
+                });
+                setShowAddCharacterForm(false);
+            }
+        } catch (error) {
+            console.error('创建角色失败:', error);
+        }
+    };
+
+    // 删除角色
+    const deleteCharacter = async (id) => {
+        // 硬编码角色（ID为负数）不能删除
+        if (id < 0) {
+            alert("该角色为系统默认角色，不可删除");
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/characters/${id}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+
+            if (response.ok) {
+                // 从角色列表中移除
+                setCharacters(characters.filter(character => character.id !== id));
+                // 如果当前选中的角色被删除，取消选择
+                if (selectedCharacter && selectedCharacter.id === id) {
+                    setSelectedCharacter(null);
+                    setChatMessages([]);
+                }
+                alert("角色删除成功");
+            } else {
+                const errorData = await response.json();
+                alert(errorData.message || '删除角色失败');
+            }
+        } catch (error) {
+            console.error('删除角色失败:', error);
+            alert('删除角色失败');
+        }
+    };
+
+    // 选择角色进行对话
+    const selectCharacterForChat = async (character) => {
+        setSelectedCharacter(character);
+        // 获取聊天历史
+        try {
+            const response = await fetch(`/api/chat/history/${character.id}`, {
+                credentials: 'include'
+            });
+            if (response.ok) {
+                const messages = await response.json();
+                setChatMessages(messages);
+            }
+        } catch (error) {
+            console.error('获取聊天历史失败:', error);
+            setChatMessages([]);
+        }
+
+        // 获取并显示角色开场白
+        try {
+            const openingResponse = await fetch(`/api/characters/${character.id}/opening-remarks`, {
+                credentials: 'include'
+            });
+            if (openingResponse.ok) {
+                const openingData = await openingResponse.json();
+                const openingRemarks = openingData.openingRemarks;
+                const voiceType = openingData.voiceType;
+
+                if (openingRemarks) {
+                    // 创建开场白消息对象
+                    const openingMessage = {
+                        characterId: character.id,
+                        message: openingRemarks,
+                        isUserMessage: false,
+                        createdAt: new Date().toISOString()
+                    };
+
+                    // 添加开场白到聊天记录
+                    setChatMessages(prevMessages => [...prevMessages, openingMessage]);
+
+                    // 播放开场白语音
+                    if (voiceType) {
+                        try {
+                            await playVoiceSegment(openingRemarks, voiceType);
+                        } catch (error) {
+                            console.warn('开场白TTS播放失败:', error);
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('获取角色开场白失败:', error);
+        }
+    };
 
     const startRecording = async () => {
         if (isRecording || isTranscribing) {
@@ -47,7 +332,7 @@ function App() {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             console.log('已获取麦克风权限');
 
-            // 检查浏览器支持的MIME类型，优先选择MP3或MP4格式以获得更好的兼容性
+            // 检查浏览器支持的MIME类型
             const mimeTypes = ['audio/mp4', 'audio/mpeg', 'audio/webm', 'audio/ogg'];
             let mimeType = '';
             for (const type of mimeTypes) {
@@ -142,7 +427,7 @@ function App() {
             form.append('characterId', selectedCharacter.id);
 
             // 修正API端点URL
-            const resp = await fetch('http://localhost:8082/api/voice-chat/send-voice', {
+            const resp = await fetch('/api/voice-chat/send-voice', {
                 method: 'POST',
                 body: form,
             });
@@ -164,7 +449,9 @@ function App() {
                 }
 
                 // 获取更新后的聊天历史
-                const historyResponse = await fetch(`http://localhost:8082/api/chat/history/${selectedCharacter.id}`);
+                const historyResponse = await fetch(`/api/chat/history/${selectedCharacter.id}`, {
+                    credentials: 'include'
+                });
                 if (historyResponse.ok) {
                     const updatedChatHistory = await historyResponse.json();
                     setChatMessages(updatedChatHistory);
@@ -212,180 +499,14 @@ function App() {
         }
     };
 
-    // 滚动到最新消息
-    useEffect(() => {
-        if (chatContainerRef.current) {
-            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-        }
-    }, [chatMessages]);
-
-    // 初始化Web Speech API
-    const initSpeechSynthesis = () => {
-        if ('speechSynthesis' in window) {
-            // 获取可用的语音列表
-            const loadVoices = () => {
-                const voices = window.speechSynthesis.getVoices();
-                setAvailableVoices(voices);
-            };
-
-            // 某些浏览器需要延迟加载语音列表
-            if (window.speechSynthesis.onvoiceschanged !== undefined) {
-                window.speechSynthesis.onvoiceschanged = loadVoices;
-            }
-
-            loadVoices();
-        } else {
-            console.warn('Web Speech API 不支持当前浏览器');
-        }
-    };
-
-    const fetchCharacters = async () => {
-        try {
-            const response = await fetch('http://localhost:8082/api/characters');
-            const data = await response.json();
-            setCharacters(data);
-        } catch (error) {
-            console.error('获取角色失败:', error);
-        }
-    };
-
-    // 获取所有音色选项
-    const fetchVoiceList = async () => {
-        try {
-            const response = await fetch('http://localhost:8082/api/characters/voices');
-            const data = await response.json();
-            setAvailableVoices(data);
-        } catch (error) {
-            console.error('获取音色列表失败:', error);
-            // 使用默认音色列表
-            setAvailableVoices([
-                { voice_name: "温婉学科讲师", voice_type: "qiniu_zh_female_wwxkjx" },
-                { voice_name: "甜美教学小源", voice_type: "qiniu_zh_female_tmjxxy" },
-                { voice_name: "校园清新学姐", voice_type: "qiniu_zh_female_xyqxxj" },
-                { voice_name: "邻家辅导学长", voice_type: "qiniu_zh_male_ljfdxz" },
-                { voice_name: "温和学科小哥", voice_type: "qiniu_zh_male_whxkxg" }
-            ]);
-        }
-    };
-
-    // 预览音色
-    const previewVoice = async (voiceType) => {
-        if (!voiceType) return;
-
-        try {
-            const text = "你好，我是您的AI助手";
-            const resp = await fetch(`http://localhost:8082/api/tts/speak`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    text: text,
-                    voice: voiceType,
-                    format: 'mp3'
-                })
-            });
-
-            if (!resp.ok) throw new Error(`TTS接口错误: ${resp.status}`);
-            const contentType = resp.headers.get('content-type') || '';
-            if (!contentType.includes('audio')) throw new Error(`返回非音频类型: ${contentType}`);
-            const arrayBuffer = await resp.arrayBuffer();
-            if (!arrayBuffer || arrayBuffer.byteLength === 0) throw new Error('音频为空');
-            const blob = new Blob([arrayBuffer], { type: contentType });
-            const url = URL.createObjectURL(blob);
-            const audio = new Audio(url);
-            audio.onended = () => URL.revokeObjectURL(url);
-            audio.onerror = () => URL.revokeObjectURL(url);
-            await audio.play();
-        } catch (e) {
-            console.error('音色预览失败:', e);
-            alert('音色预览失败');
-        }
-    };
-
-    // 搜索角色
-    const searchCharacters = async () => {
-        if (!searchTerm.trim()) {
-            fetchCharacters();
-            return;
-        }
-
-        try {
-            const response = await fetch(`http://localhost:8082/api/characters/search?keyword=${encodeURIComponent(searchTerm)}`);
-            const data = await response.json();
-            setCharacters(data);
-        } catch (error) {
-            console.error('搜索角色失败:', error);
-        }
-    };
-
-    // 创建新角色
-    const createCharacter = async () => {
-        // 如果没有选择音色，使用推荐音色
-        const characterData = {
-            ...newCharacter,
-            voiceType: newCharacter.voiceType || recommendVoice()
-        };
-
-        try {
-            const response = await fetch('http://localhost:8082/api/characters', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(characterData),
-            });
-
-            if (response.ok) {
-                const createdCharacter = await response.json();
-                setCharacters([...characters, createdCharacter]);
-                // 重置表单
-                setNewCharacter({
-                    name: '',
-                    description: '',
-                    personalityTraits: '',
-                    backgroundStory: '',
-                    voiceType: ''
-                });
-            }
-        } catch (error) {
-            console.error('创建角色失败:', error);
-        }
-    };
-
-    // 选择角色进行对话
-    const selectCharacterForChat = async (character) => {
-        setSelectedCharacter(character);
-        // 获取聊天历史
-        try {
-            const response = await fetch(`http://localhost:8082/api/chat/history/${character.id}`);
-            if (response.ok) {
-                const messages = await response.json();
-                setChatMessages(messages);
-            }
-        } catch (error) {
-            console.error('获取聊天历史失败:', error);
-            setChatMessages([]);
-        }
-    };
-
     // 发送消息
     const sendMessage = async () => {
-        if (!newMessage.trim() || !selectedCharacter || isSending) return;
-
-        await sendMessageWithText(newMessage);
-    };
-
-    // 直接用指定文本发送（用于ASR转写后自动发送）
-    const sendMessageWithText = async (messageText) => {
-        const text = (messageText || '').trim();
-        if (!text || !selectedCharacter || isSending) return;
+        if (!newMessage.trim() || !selectedCharacter) return;
 
         setIsSending(true);
-
         const userMessage = {
             characterId: selectedCharacter.id,
-            message: text,
+            message: newMessage,
             isUserMessage: true
         };
 
@@ -394,52 +515,61 @@ function App() {
         setNewMessage('');
 
         try {
-            const response = await fetch('http://localhost:8082/api/chat/send', {
+            const response = await fetch('/api/chat/send', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'include',
                 body: JSON.stringify(userMessage),
             });
 
             if (response.ok) {
                 const result = await response.json();
                 if (result.success) {
-                    // 更新聊天历史
-                    const historyResponse = await fetch(`http://localhost:8082/api/chat/history/${selectedCharacter.id}`);
-                    if (historyResponse.ok) {
-                        const updatedChatHistory = await historyResponse.json();
-                        setChatMessages(updatedChatHistory);
+                    // 默认使用流式显示（不再需要检查关键字）
+                    if (result.aiMessages && result.aiMessages.length > 0) {
+                        // 流式显示AI回复（默认行为）
+                        await displayAIMessagesAsStream(result.aiMessages[0].message, selectedCharacter.id);
+                    } else {
+                        // 更新聊天历史
+                        const historyResponse = await fetch(`/api/chat/history/${selectedCharacter.id}`, {
+                            credentials: 'include'
+                        });
+                        if (historyResponse.ok) {
+                            const updatedChatHistory = await historyResponse.json();
+                            setChatMessages(updatedChatHistory);
 
-                        // 如果有AI回复消息，使用分段显示功能
-                        if (result.aiMessages && result.aiMessages.length > 0) {
-                            // 移除最后几条AI消息（因为我们要用分段显示替换它们）
-                            const messagesWithoutLastAI = updatedChatHistory.slice(0, -result.aiMessages.length);
-                            setChatMessages(messagesWithoutLastAI);
+                            // 如果有AI回复消息，使用分段显示功能
+                            if (result.aiMessages && result.aiMessages.length > 0) {
+                                // 移除最后几条AI消息（因为我们要用分段显示替换它们）
+                                const messagesWithoutLastAI = updatedChatHistory.slice(0, -result.aiMessages.length);
+                                setChatMessages(messagesWithoutLastAI);
 
-                            // 分段显示AI回复
-                            await displayAIMessagesInSegments(result.aiMessages, selectedCharacter.id);
-                        }
+                                // 分段显示AI回复
+                                await displayAIMessagesInSegments(result.aiMessages, selectedCharacter.id);
+                            }
 
-                        // 如果有音频数据，自动播放
-                        if (result.audioData) {
-                            try {
-                                const audioBytes = Uint8Array.from(atob(result.audioData), c => c.charCodeAt(0));
-                                const blob = new Blob([audioBytes], { type: 'audio/mpeg' });
-                                const url = URL.createObjectURL(blob);
-                                const audio = new Audio(url);
-                                audio.onended = () => {
-                                    setIsSpeaking(false);
-                                    URL.revokeObjectURL(url);
-                                };
-                                audio.onerror = () => {
-                                    setIsSpeaking(false);
-                                    URL.revokeObjectURL(url);
-                                };
-                                setIsSpeaking(true);
-                                await audio.play();
-                            } catch (audioError) {
-                                console.error('播放TTS音频失败:', audioError);
+                            // 如果有音频数据，自动播放
+                            if (result.audioData) {
+                                try {
+                                    const audioBytes = Uint8Array.from(atob(result.audioData), c => c.charCodeAt(0));
+                                    const blob = new Blob([audioBytes], { type: 'audio/mpeg' });
+                                    const url = URL.createObjectURL(blob);
+                                    const audio = new Audio(url);
+                                    audio.onended = () => {
+                                        setIsSpeaking(false);
+                                        URL.revokeObjectURL(url);
+                                    };
+                                    audio.onerror = () => {
+                                        setIsSpeaking(false);
+                                        URL.revokeObjectURL(url);
+                                    };
+                                    setIsSpeaking(true);
+                                    await audio.play();
+                                } catch (audioError) {
+                                    console.error('播放TTS音频失败:', audioError);
+                                }
                             }
                         }
                     }
@@ -469,6 +599,82 @@ function App() {
             setChatMessages([...updatedMessages, errorMessage]);
         } finally {
             setIsSending(false);
+        }
+    };
+
+    // 将AI回复按字符流式显示
+    const displayAIMessagesAsStream = async (fullMessage, characterId) => {
+        // 创建临时消息对象
+        const tempMessage = {
+            characterId: characterId,
+            message: '',
+            isUserMessage: false,
+            createdAt: new Date().toISOString()
+        };
+
+        // 先显示空消息
+        setChatMessages(prevMessages => [...prevMessages, tempMessage]);
+
+        let currentText = '';
+        // 逐字符显示消息
+        for (let i = 0; i < fullMessage.length; i++) {
+            currentText += fullMessage[i];
+            // 更新最后一条消息的内容
+            setChatMessages(prevMessages => {
+                const newMessages = [...prevMessages];
+                newMessages[newMessages.length - 1] = {
+                    ...newMessages[newMessages.length - 1],
+                    message: currentText
+                };
+                return newMessages;
+            });
+
+            // 添加小延迟以模拟真实流式效果
+            await new Promise(resolve => setTimeout(resolve, 30)); // 30ms延迟
+        }
+
+        // 保存完整的消息到数据库
+        try {
+            const saveResponse = await fetch('/api/chat/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    characterId: characterId,
+                    message: currentText,
+                    isUserMessage: false,
+                    createdAt: tempMessage.createdAt // 保持原始创建时间
+                }),
+            });
+
+            let savedMessage = null;
+            if (saveResponse.ok) {
+                savedMessage = await saveResponse.json();
+                // 更新消息ID
+                setChatMessages(prevMessages => {
+                    const newMessages = [...prevMessages];
+                    newMessages[newMessages.length - 1] = {
+                        ...savedMessage,
+                        // 确保时间显示正确
+                        createdAt: savedMessage.createdAt || tempMessage.createdAt
+                    };
+                    return newMessages;
+                });
+            }
+
+            // 播放TTS音频
+            const character = characters.find(c => c.id === characterId);
+            if (character && currentText) {
+                try {
+                    await playVoiceSegment(currentText, character.voiceType);
+                } catch (error) {
+                    console.warn('TTS播放失败:', error);
+                }
+            }
+        } catch (error) {
+            console.error('保存消息失败:', error);
         }
     };
 
@@ -545,9 +751,10 @@ function App() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'include',
                 body: JSON.stringify({
                     text: message,
-                    voice: characterVoiceType, // 使用角色特定音色
+                    voice: characterVoiceType || 'Cherry', // 使用角色特定音色，如果未设置则使用默认音色
                     format: 'mp3'
                 }),
                 signal: controller.signal
@@ -561,37 +768,10 @@ function App() {
                 if (!arrayBuffer || arrayBuffer.byteLength === 0) throw new Error('音频为空');
                 playAudio(arrayBuffer);
             }).catch(e => {
-                console.warn('后端TTS失败，尝试使用浏览器TTS:', e);
+                console.error('后端TTS失败:', e);
                 setCurrentPlayingMessage(null); // 清除当前播放的消息
-
-                // 回退到浏览器SpeechSynthesis
-                if ('speechSynthesis' in window) {
-                    const utterance = new SpeechSynthesisUtterance(message);
-                    utterance.rate = 1;
-                    utterance.pitch = 1;
-                    utterance.volume = 1;
-                    let selectedVoice = null;
-                    if (availableVoices.length > 0) {
-                        selectedVoice = availableVoices.find(voice => voice.lang.includes('zh') || voice.lang.includes('CN') || voice.lang.includes('TW'))
-                            || availableVoices.find(voice => voice.lang.includes('en'))
-                            || availableVoices[0];
-                        utterance.voice = selectedVoice;
-                    }
-
-                    utterance.onend = () => {
-                        setCurrentPlayingMessage(null); // 清除当前播放的消息
-                        resolve();
-                    };
-                    utterance.onerror = () => {
-                        setCurrentPlayingMessage(null); // 清除当前播放的消息
-                        resolve(); // 即使出错也继续
-                    };
-
-                    window.speechSynthesis.speak(utterance);
-                } else {
-                    setCurrentPlayingMessage(null); // 清除当前播放的消息
-                    resolve(); // 如果不支持语音合成，直接完成
-                }
+                // 不再回退到浏览器SpeechSynthesis，直接抛出错误
+                reject(new Error('TTS服务不可用: ' + e.message));
             });
         });
     };
@@ -648,170 +828,226 @@ function App() {
         return "qiniu_zh_female_wwxkjx";
     };
 
-    // 删除角色
-    const deleteCharacter = async (characterId) => {
+    // 保存消息到数据库
+    const saveMessageToDB = async (characterId, message, isUserMessage, emotion = null, suggestion = null) => {
         try {
-            const response = await fetch(`http://localhost:8082/api/characters/${characterId}`, {
-                method: 'DELETE',
+            const response = await fetch('/api/chat/messages', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    characterId,
+                    message,
+                    isUserMessage,
+                    emotion,
+                    suggestion
+                }),
             });
 
-            if (response.ok) {
-                // 删除成功，从角色列表中移除该角色
-                setCharacters(characters.filter(character => character.id !== characterId));
-                // 如果当前选中的角色被删除，清空选中状态
-                if (selectedCharacter && selectedCharacter.id === characterId) {
-                    setSelectedCharacter(null);
-                    setChatMessages([]);
-                }
-                alert('角色删除成功');
-            } else if (response.status === 400) {
-                // 角色不可删除
-                const errorMsg = await response.text();
-                alert(errorMsg);
-            } else {
-                alert('删除角色失败');
+            if (!response.ok) {
+                throw new Error(`保存消息失败: ${response.status}`);
             }
+
+            const savedMessage = await response.json();
+            return savedMessage;
         } catch (error) {
-            console.error('删除角色失败:', error);
-            alert('删除角色失败，请检查网络连接');
+            console.error('保存消息到数据库失败:', error);
+            throw error;
         }
     };
 
+    // 条件渲染必须放在所有Hooks和函数定义之后
+    // 显示登录界面，如果用户未登录
+    if (isLoading) {
+        return <div className="loading">加载中...</div>;
+    }
+
+    if (!currentUser) {
+        return <Login onLogin={handleLogin} />;
+    }
+
     return (
-        <div className="App">
-            <header className="App-header">
-                <h1>AI角色扮演平台</h1>
+        <div className="app">
+            <div className="cyber-grid"></div>
+
+            <div className="floating-elements">
+                <div className="floating-element"></div>
+                <div className="floating-element"></div>
+                <div className="floating-element"></div>
+            </div>
+
+            <header className="app-header">
+                <div className="header-glow"></div>
+                <div className="header-content">
+                    <h1>FutureBuddy - AI角色互动平台</h1>
+                    {currentUser && (
+                        <div className="user-info">
+                            <span>欢迎, {currentUser.username}!</span>
+                            <button onClick={handleLogout} className="logout-button">登出</button>
+                        </div>
+                    )}
+                </div>
             </header>
 
-            <main>
-                {/* 搜索框 */}
-                <section className="search-section">
-                    <form onSubmit={handleSearchSubmit}>
-                        <button type="button" onClick={() => setShowAddCharacterForm(true)}>添加角色</button>
-                        <input
-                            type="text"
-                            placeholder="搜索角色..."
-                            value={searchTerm}
-                            onChange={handleSearchChange}
-                        />
-                        <button type="submit">搜索</button>
-                        <button type="button" onClick={fetchCharacters}>显示全部</button>
-                    </form>
-                </section>
- 
+            <main className="app-main">
                 <div className="main-content">
-                    {/* 角色列表 - 固定在左侧 */}
-                    <section className="characters-section" ref={charactersContainerRef}>
-                        <h2>可用角色</h2>
-                        <div className="characters-grid">
-                            {characters.map((character) => (
-                                <div
-                                    key={character.id}
-                                    className={`character-card ${selectedCharacter && selectedCharacter.id === character.id ? 'selected' : ''}`}
-                                    onClick={() => selectCharacterForChat(character)}
+                    {/* 角色列表区域 - 仅在未选择角色时显示 */}
+                    {!selectedCharacter && (
+                        <section className="characters-section">
+                            <div className="characters-header">
+                                <h2>角色列表</h2>
+                                <button
+                                    onClick={() => setShowAddCharacterForm(true)}
+                                    className="add-character-button"
                                 >
-                                    <h3>{character.name}</h3>
-                                    <p><strong>描述:</strong> {character.description}</p>
-                                    <p><strong>性格特征:</strong> {character.personalityTraits}</p>
-                                    <p><strong>背景故事:</strong> {character.backgroundStory}</p>
-                                    {/* 只有当角色可删除时才显示删除按钮 */}
-                                    {character.isDeletable !== false && (
-                                        <button
-                                            className="delete-character-button"
-                                            onClick={(e) => {
-                                                e.stopPropagation(); // 阻止事件冒泡，避免触发选择角色
-                                                if (window.confirm(`确定要删除角色 "${character.name}" 吗？`)) {
-                                                    deleteCharacter(character.id);
-                                                }
-                                            }}
-                                        >
-                                            删除角色
-                                        </button>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    </section>
+                                    + 添加角色
+                                </button>
+                            </div>
 
-                    {/* 对话区域 - 固定在右侧 */}
-                    {selectedCharacter && (
-                        <section className={`chat-section ${selectedCharacter.name === "哈利·波特" ? "harry-potter-chat" : selectedCharacter.name === "苏格拉底" ? "socrates-chat" : selectedCharacter.name === "英语老师" ? "english-teacher-chat" : "default-background"} ${isFullscreen ? "fullscreen" : ""}`}>
-                            <h2>与 {selectedCharacter.name} 对话</h2>
-                            <div className="chat-container">
-                                <div className="chat-messages" ref={chatContainerRef}>
-                                    {chatMessages.map((msg, index) => (
-                                        <div key={index} className={`message ${msg.isUserMessage ? 'user-message' : 'ai-message'}`}>
-                                            <div className={`message-content ${!msg.isUserMessage && currentPlayingMessage === msg.message ? 'playing' : ''}`}>
-                                                {msg.message}
-                                                {!msg.isUserMessage && (
-                                                    <>
-                                                        <button
-                                                            className="voice-button"
-                                                            onClick={() => playVoice(msg.message, selectedCharacter.voiceType)}
-                                                            title={currentPlayingMessage === msg.message ? "停止播放" : "播放语音"}
-                                                            disabled={!msg.message.trim()}
-                                                        >
-                                                            {currentPlayingMessage === msg.message ? "⏹️" : "🔊"}
-                                                        </button>
-                                                        {currentPlayingMessage === msg.message && (
-                                                            <span className="voice-indicator" title="正在播放语音"></span>
-                                                        )}
-                                                    </>
-                                                )}
-                                            </div>
-                                            <div className="message-time">
-                                                {msg.createdAt ? new Date(msg.createdAt).toLocaleString() : '刚刚'}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                                {/* 在全屏模式下也保留输入区域 */}
-                                <div className="chat-input">
-                                    {isRecording && (
-                                        <div className="recording-indicator" title="正在语音输入">
-                                            <span className="dot" /> 正在语音输入...
-                                        </div>
-                                    )}
-                                    {isTranscribing && (
-                                        <div className="transcribing-indicator" title="正在转写">正在转写...</div>
-                                    )}
-                                    <textarea
-                                        value={newMessage}
-                                        onChange={(e) => setNewMessage(e.target.value)}
-                                        onKeyPress={handleKeyPress}
-                                        placeholder={isRecording ? `正在语音输入...` : (isTranscribing ? '正在转写...' : `对 ${selectedCharacter.name} 说些什么...`)}
-                                        disabled={isSending || isTranscribing}
+                            {/* 搜索框 */}
+                            <form onSubmit={handleSearchSubmit} className="search-form">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
+                                    <input
+                                        type="text"
+                                        value={searchTerm}
+                                        onChange={handleSearchChange}
+                                        placeholder="搜索角色..."
+                                        className="search-input"
                                     />
+                                    <button type="submit" className="search-button">搜索</button>
+                                </div>
+                                {searchTerm && (
                                     <button
                                         type="button"
-                                        className={`mic-button ${isRecording ? 'recording' : ''}`}
-                                        onClick={isRecording ? stopRecording : startRecording}
-                                        title={isRecording ? '停止语音输入' : '开始语音输入'}
-                                        disabled={isSending || isTranscribing}
+                                        onClick={() => {
+                                            setSearchTerm('');
+                                            fetchCharacters();
+                                        }}
+                                        className="clear-search-button"
                                     >
-                                        {isRecording ? '⏹️' : '🎙️'}
+                                        清除
                                     </button>
-                                    <button onClick={sendMessage} disabled={isSending}>
-                                        {isSending ? '发送中...' : '发送'}
-                                    </button>
-                                    {/* 添加停止语音按钮 */}
-                                    {currentPlayingMessage && (
-                                        <button onClick={stopVoice} className="stop-voice-button">
-                                            停止语音
-                                        </button>
-                                    )}
-                                </div>
-                                {/* 添加全屏切换按钮 */}
-                                <button 
-                                    className="fullscreen-toggle-button"
-                                    onClick={() => setIsFullscreen(!isFullscreen)}
-                                >
-                                    {isFullscreen ? "退出全屏" : "全屏显示"}
-                                </button>
+                                )}
+                            </form>
+
+                            {/* 角色列表 */}
+                            <div className="characters-grid" ref={charactersContainerRef}>
+                                {characters.map(character => (
+                                    <div key={character.id} className="character-card">
+                                        <h3>{character.name}</h3>
+                                        <p>{character.description}</p>
+                                        <div className="character-actions">
+                                            <button
+                                                onClick={() => selectCharacterForChat(character)}
+                                                className="chat-button"
+                                            >
+                                                开始对话
+                                            </button>
+                                            <button
+                                                onClick={() => deleteCharacter(character.id)}
+                                                className="delete-button"
+                                            >
+                                                删除
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </section>
                     )}
 
+                    {/* 聊天区域 - 仅在选择角色后显示 */}
+                    {selectedCharacter && (
+                        <section className={`chat-section ${isFullscreen ? 'fullscreen' : ''}`}>
+                            <div className="chat-header">
+                                <div className="header-glow"></div>
+                                <div className="avatar">
+                                    {selectedCharacter.name.charAt(0)}
+                                </div>
+                                <div className="contact-info">
+                                    <h2>{selectedCharacter.name}</h2>
+                                    <p><span className="status-dot"></span> 在线 - 响应中</p>
+                                </div>
+                                <div className="header-buttons">
+                                    <button
+                                        onClick={() => {
+                                            setSelectedCharacter(null);
+                                            setChatMessages([]);
+                                        }}
+                                        className="back-button"
+                                        title="返回角色列表"
+                                    >
+                                        ←
+                                    </button>
+                                    {/* 添加全屏切换按钮 */}
+                                    <button
+                                        className="fullscreen-toggle-button"
+                                        onClick={() => setIsFullscreen(!isFullscreen)}
+                                        title={isFullscreen ? "退出全屏" : "全屏显示"}
+                                    >
+                                        {isFullscreen ? ".EXIT" : "⛶"}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="chat-container" ref={chatContainerRef}>
+                                {chatMessages.map((msg, index) => (
+                                    <div key={index} className={`message ${msg.isUserMessage ? 'user-message' : 'ai-message'}`}>
+                                        <div className={`message-content ${!msg.isUserMessage && currentPlayingMessage === msg.message ? 'playing' : ''}`}>
+                                            {msg.message}
+                                            {!msg.isUserMessage && (
+                                                <>
+                                                    {currentPlayingMessage === msg.message && (
+                                                        <span className="voice-indicator" title="正在播放语音"></span>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                        <div className="message-time">
+                                            {msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            {msg.isUserMessage && (
+                                                <span className="message-status">✓✓</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* 在全屏模式下也保留输入区域 */}
+                            <div className="chat-input">
+                                {isRecording && (
+                                    <div className="recording-indicator" title="正在语音输入">
+                                        <span className="dot" /> 正在录音...
+                                    </div>
+                                )}
+                                {isTranscribing && (
+                                    <div className="transcribing-indicator" title="正在转写">正在转写...</div>
+                                )}
+                                <input
+                                    type="text"
+                                    value={newMessage}
+                                    onChange={(e) => setNewMessage(e.target.value)}
+                                    onKeyPress={handleKeyPress}
+                                    placeholder={isRecording ? `正在录音...` : (isTranscribing ? '正在转写...' : `输入消息...`)}
+                                    disabled={isSending || isTranscribing}
+                                    className="message-input"
+                                />
+                                <button onClick={sendMessage} disabled={isSending} className="send-button">
+                                    {isSending ? (
+                                        <span>⋯</span>
+                                    ) : (
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                        </svg>
+                                    )}
+                                </button>
+                            </div>
+
+                        </section>
+                    )}
                 </div>
 
                 {/* 添加新角色表单 - 仅在点击添加角色按钮后显示 */}
@@ -881,12 +1117,12 @@ function App() {
                                 </select>
                                 {newCharacter.voiceType && (
                                     <button type="button" onClick={() => previewVoice(newCharacter.voiceType)}>
-                                        试听音色
+                                        🔊 试听音色
                                     </button>
                                 )}
                                 {!newCharacter.voiceType && (
                                     <button type="button" onClick={() => previewVoice(recommendVoice())}>
-                                        试听推荐音色
+                                        🔊 试听推荐音色
                                     </button>
                                 )}
                             </div>
